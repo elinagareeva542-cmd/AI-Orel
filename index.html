@@ -1,0 +1,143 @@
+﻿<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lingua Path — Изучение языков</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=IBM+Plex+Serif:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="authOverlay" class="auth-overlay">
+    <section class="auth-card panel">
+      <h2>Вход в кабинет</h2>
+      <input id="authEmail" type="email" placeholder="Email" />
+      <input id="authPassword" type="password" placeholder="Пароль" />
+      <div class="btn-row">
+        <button id="loginBtn" class="cta">Войти</button>
+        <button id="registerBtn" class="ghost">Регистрация</button>
+      </div>
+      <div id="googleSignInWrap"></div>
+      <p id="authMsg" class="summary"></p>
+    </section>
+  </div>
+
+  <div class="bg-shape shape-1"></div>
+  <div class="bg-shape shape-2"></div>
+
+  <main class="page">
+    <header class="hero">
+      <p class="kicker">Lingua Path</p>
+      <h1>Изучение языков - это просто!</h1>
+    </header>
+
+    <section class="panel timer-panel" id="timerPanel">
+      <div class="panel-head"><h2>Фокус-таймер</h2></div>
+      <div class="grid">
+        <label>Минут на сессию
+          <input id="timerMinutes" type="number" min="5" max="120" value="25" />
+        </label>
+      </div>
+      <p id="timerView" class="active-topic">25:00</p>
+      <div class="btn-row">
+        <button id="startTimerBtn" class="cta">Старт</button>
+        <button id="pauseTimerBtn" class="ghost">Пауза</button>
+        <button id="resetTimerBtn" class="ghost">Сброс</button>
+      </div>
+    </section>
+
+    <section class="panel upload-panel">
+      <div class="panel-head">
+        <h2>1. Материалы</h2>
+        <span class="badge">TXT, MD, DOCX, PDF</span>
+      </div>
+      <label class="dropzone" id="dropzone" for="fileInput">
+        <input id="fileInput" type="file" multiple accept=".txt,.md,.doc,.docx,.pdf" />
+        <span>Нажмите или перетащите файлы сюда</span>
+        <small>Темы идут по порядку из учебника. Авто-распознавание языка включено.</small>
+      </label>
+      <div class="grid">
+        <label>Режим распознавания PDF
+          <select id="parseMode">
+            <option value="fast">Быстро</option>
+            <option value="accurate" selected>Точно</option>
+          </select>
+        </label>
+      </div>
+      <div id="extractStatus" class="muted"></div>
+      <ul id="fileList" class="file-list"></ul>
+    </section>
+
+    <section class="panel settings-panel">
+      <div class="panel-head"><h2>2. Цели обучения</h2></div>
+      <div class="grid">
+        <label>Язык
+          <select id="language">
+            <option selected>Английский</option>
+            <option>Арабский</option>
+            <option>Испанский</option>
+            <option>Турецкий</option>
+          </select>
+        </label>
+        <label>Текущий уровень
+          <select id="level"><option>A0</option><option selected>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
+        </label>
+        <label>Целевой уровень
+          <select id="targetLevel"><option>A1</option><option>A2</option><option selected>B1</option><option>B2</option><option>C1</option><option>C2</option></select>
+        </label>
+        <label>Часов в неделю
+          <input id="hours" type="number" min="1" max="30" value="5" />
+        </label>
+      </div>
+      <div class="btn-row">
+        <button id="buildPlanBtn" class="cta">Построить план</button>
+        <button id="nextTopicBtn" class="ghost">Следующая тема</button>
+        <button id="completeTopicBtn" class="ghost">Отметить тему пройденной</button>
+      </div>
+    </section>
+
+    <section class="panel roadmap-panel" id="roadmapPanel" hidden>
+      <div class="panel-head"><h2>3. Темы по учебнику</h2></div>
+      <div id="planSummary" class="summary"></div>
+      <ol id="roadmap" class="roadmap"></ol>
+    </section>
+
+    <section class="panel tasks-panel" id="tasksPanel" hidden>
+      <div class="panel-head"><h2>4. Задания по текущей теме</h2></div>
+      <p id="activeTopic" class="active-topic"></p>
+      <article id="topicGuide" class="task"></article>
+      <h3>Упражнения из учебника</h3>
+      <ul id="bookExercises" class="review-list"></ul>
+      <div id="tasks" class="tasks"></div>
+      <button id="checkTasksBtn" class="cta">Проверить мои ответы</button>
+      <p id="taskFeedback" class="summary"></p>
+    </section>
+
+    <section class="panel quiz-panel" id="quizPanel" hidden>
+      <div class="panel-head"><h2>5. Тест (10 вопросов)</h2></div>
+      <button id="aiQuizBtn" class="ghost">Сгенерировать AI-тест по теме</button>
+      <div id="quiz" class="quiz"></div>
+      <button id="checkQuizBtn" class="cta">Проверить тест</button>
+      <p id="quizResult" class="summary"></p>
+    </section>
+
+    <section class="panel cards-panel" id="cardsPanel" hidden>
+      <div class="panel-head"><h2>6. Карточки и Anki</h2></div>
+      <p class="summary">Сначала согласуйте слова темы, затем экспортируйте карточки.</p>
+      <ul id="pendingCards" class="review-list"></ul>
+      <div class="btn-row">
+        <button id="approveCardsBtn" class="cta">Одобрить выбранные карточки</button>
+        <button id="exportAnkiBtn" class="ghost">Экспорт Anki (.csv)</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/build/pdf.min.mjs" type="module"></script>
+  <script src="https://unpkg.com/mammoth/mammoth.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="app.js"></script>
+</body>
+</html>
