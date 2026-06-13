@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Вход / Регистрация</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .auth-card {
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 25px 45px -12px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 460px;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #eef2f6;
+            background: #fafcff;
+        }
+
+        .tab-btn {
+            flex: 1;
+            text-align: center;
+            padding: 18px 12px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: #5b677b;
+            transition: all 0.2s;
+            letter-spacing: 0.3px;
+        }
+
+        .tab-btn.active {
+            color: #4f46e5;
+            border-bottom: 3px solid #4f46e5;
+            background: white;
+        }
+
+        .tab-btn:not(.active):hover {
+            color: #1f2937;
+            background: #f1f5f9;
+        }
+
+        .form-container {
+            padding: 32px 28px 38px;
+        }
+
+        .auth-form {
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .auth-form.active-form {
+            display: flex;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .input-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #334155;
+        }
+
+        .input-group input {
+            padding: 14px 16px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 20px;
+            font-size: 1rem;
+            transition: 0.2s;
+            background: #fff;
+            outline: none;
+        }
+
+        .input-group input:focus {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+        }
+
+        .btn-submit {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 14px 18px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 8px;
+            letter-spacing: 0.3px;
+        }
+
+        .btn-submit:hover {
+            background: #4338ca;
+            transform: scale(0.98);
+        }
+
+        .info-text {
+            text-align: center;
+            font-size: 0.8rem;
+            color: #5b6e8c;
+            margin-top: 8px;
+        }
+
+        .error-msg {
+            color: #dc2626;
+            font-size: 0.75rem;
+            margin-top: 4px;
+            min-height: 18px;
+        }
+
+        hr {
+            margin: 8px 0 4px;
+            border: none;
+            border-top: 1px solid #edf2f7;
+        }
+
+        @media (max-width: 500px) {
+            .form-container {
+                padding: 24px 20px;
+            }
+            .tab-btn {
+                padding: 14px 8px;
+                font-size: 1rem;
+            }
+            .btn-submit {
+                padding: 12px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="auth-card">
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="login">Вход</button>
+        <button class="tab-btn" data-tab="register">Регистрация</button>
+    </div>
+
+    <div class="form-container">
+        <!-- Форма входа -->
+        <form id="login-form" class="auth-form active-form" action="#" method="post">
+            <div class="input-group">
+                <label>Логин или Email</label>
+                <input type="text" id="login_username" placeholder="username@example.com или логин" required>
+                <div class="error-msg" id="login_user_error"></div>
+            </div>
+            <div class="input-group">
+                <label>Пароль</label>
+                <input type="password" id="login_password" placeholder="••••••••" required>
+                <div class="error-msg" id="login_pass_error"></div>
+            </div>
+            <button type="submit" class="btn-submit">Войти</button>
+        </form>
+
+        <!-- Форма регистрации (без подтверждения пароля) -->
+        <form id="register-form" class="auth-form" action="#" method="post">
+            <div class="input-group">
+                <label>Логин</label>
+                <input type="text" id="reg_username" placeholder="например: ivan_petrov" required>
+                <div class="error-msg" id="reg_user_error"></div>
+            </div>
+            <div class="input-group">
+                <label>Email</label>
+                <input type="email" id="reg_email" placeholder="my@email.com" required>
+                <div class="error-msg" id="reg_email_error"></div>
+            </div>
+            <div class="input-group">
+                <label>Пароль</label>
+                <input type="password" id="reg_password" placeholder="минимум 4 символа" required>
+                <div class="error-msg" id="reg_pass_error"></div>
+            </div>
+            <button type="submit" class="btn-submit">Зарегистрироваться</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Переключение вкладок
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const forms = document.querySelectorAll('.auth-form');
+    
+    function switchTab(tabId) {
+        forms.forEach(form => form.classList.remove('active-form'));
+        if (tabId === 'login') {
+            document.getElementById('login-form').classList.add('active-form');
+        } else {
+            document.getElementById('register-form').classList.add('active-form');
+        }
+        tabBtns.forEach(btn => {
+            if (btn.dataset.tab === tabId) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+        clearAllErrors();
+    }
+    
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const tab = btn.dataset.tab;
+            switchTab(tab);
+        });
+    });
+    
+    function clearAllErrors() {
+        const errorSpans = document.querySelectorAll('.error-msg');
+        errorSpans.forEach(span => span.innerText = '');
+    }
+    
+    function showError(elementId, message) {
+        const errorEl = document.getElementById(elementId);
+        if(errorEl) errorEl.innerText = message;
+    }
+    
+    // Валидация входа
+    function validateLogin() {
+        let isValid = true;
+        const loginVal = document.getElementById('login_username').value.trim();
+        const passVal = document.getElementById('login_password').value.trim();
+        
+        if(!loginVal) {
+            showError('login_user_error', '❌ Введите логин или email');
+            isValid = false;
+        } else {
+            showError('login_user_error', '');
+        }
+        
+        if(!passVal) {
+            showError('login_pass_error', '❌ Введите пароль');
+            isValid = false;
+        } else if(passVal.length < 4) {
+            showError('login_pass_error', '❌ Пароль должен быть не менее 4 символов');
+            isValid = false;
+        } else {
+            showError('login_pass_error', '');
+        }
+        return isValid;
+    }
+    
+    // Валидация регистрации (без подтверждения пароля)
+    function validateRegister() {
+        let isValid = true;
+        const username = document.getElementById('reg_username').value.trim();
+        const email = document.getElementById('reg_email').value.trim();
+        const password = document.getElementById('reg_password').value;
+        
+        // Логин
+        if(!username) {
+            showError('reg_user_error', '❌ Укажите логин');
+            isValid = false;
+        } else if(username.length < 3) {
+            showError('reg_user_error', '❌ Логин не менее 3 символов');
+            isValid = false;
+        } else {
+            showError('reg_user_error', '');
+        }
+        
+        // Email
+        const emailPattern = /^[^\s@]+@([^\s@]+\.)+[^\s@]+$/;
+        if(!email) {
+            showError('reg_email_error', '❌ Введите email');
+            isValid = false;
+        } else if(!emailPattern.test(email)) {
+            showError('reg_email_error', '❌ Некорректный email (пример: name@domain.com)');
+            isValid = false;
+        } else {
+            showError('reg_email_error', '');
+        }
+        
+        // Пароль
+        if(!password) {
+            showError('reg_pass_error', '❌ Придумайте пароль');
+            isValid = false;
+        } else if(password.length < 4) {
+            showError('reg_pass_error', '❌ Пароль должен быть не менее 4 символов');
+            isValid = false;
+        } else {
+            showError('reg_pass_error', '');
+        }
+        
+        return isValid;
+    }
+    
+    // Обработчики отправки форм
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
+    
+    loginForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if(validateLogin()) {
+            const loginField = document.getElementById('login_username').value;
+            alert(`✅ Добро пожаловать, ${loginField}!`);
+            // Здесь мог бы быть реальный запрос к серверу
+        }
+    });
+    
+    registerForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if(validateRegister()) {
+            const newUser = document.getElementById('reg_username').value;
+            alert(`🎉 Регистрация выполнена!\nПользователь "${newUser}" создан. Теперь войдите через вкладку "Вход".`);
+            // Очистка полей регистрации
+            document.getElementById('reg_username').value = '';
+            document.getElementById('reg_email').value = '';
+            document.getElementById('reg_password').value = '';
+            clearAllErrors();
+            // Переключение на форму входа
+            switchTab('login');
+        }
+    });
+    
+    // Очистка ошибок при вводе
+    const allInputs = document.querySelectorAll('input');
+    allInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            const parentGroup = this.closest('.input-group');
+            if(parentGroup) {
+                const errorMsgDiv = parentGroup.querySelector('.error-msg');
+                if(errorMsgDiv) errorMsgDiv.innerText = '';
+            }
+        });
+    });
+</script>
+</body>
+</html>
