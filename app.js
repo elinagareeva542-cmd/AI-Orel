@@ -445,6 +445,177 @@ const GLOSSARY_BY_LANG = {
   }
 };
 
+const LEXICAL_BANK_BY_LANG = {
+  en: {
+    concepts: [
+      { target: 'rule', ru: 'правило' }, { target: 'example', ru: 'пример' },
+      { target: 'reason', ru: 'причина' }, { target: 'result', ru: 'результат' },
+      { target: 'choice', ru: 'выбор' }, { target: 'plan', ru: 'план' },
+      { target: 'experience', ru: 'опыт' }, { target: 'opinion', ru: 'мнение' },
+      { target: 'problem', ru: 'проблема' }, { target: 'solution', ru: 'решение' }
+    ],
+    actions: [
+      { target: 'to work', ru: 'работать' }, { target: 'to study', ru: 'учиться' },
+      { target: 'to live', ru: 'жить' }, { target: 'to speak', ru: 'говорить' },
+      { target: 'to ask', ru: 'спрашивать' }, { target: 'to answer', ru: 'отвечать' },
+      { target: 'to choose', ru: 'выбирать' }, { target: 'to explain', ru: 'объяснять' },
+      { target: 'to compare', ru: 'сравнивать' }, { target: 'to remember', ru: 'запоминать' }
+    ],
+    descriptions: [
+      { target: 'important', ru: 'важный' }, { target: 'difficult', ru: 'сложный' },
+      { target: 'easy', ru: 'лёгкий' }, { target: 'useful', ru: 'полезный' },
+      { target: 'correct', ru: 'правильный' }, { target: 'different', ru: 'разный' },
+      { target: 'similar', ru: 'похожий' }, { target: 'often', ru: 'часто' },
+      { target: 'usually', ru: 'обычно' }, { target: 'carefully', ru: 'внимательно' }
+    ],
+    situations: [
+      { target: 'classroom', ru: 'аудитория' }, { target: 'workplace', ru: 'рабочее место' },
+      { target: 'journey', ru: 'поездка' }, { target: 'meeting', ru: 'встреча' },
+      { target: 'conversation', ru: 'разговор' }, { target: 'shop', ru: 'магазин' },
+      { target: 'station', ru: 'станция' }, { target: 'home', ru: 'дом' },
+      { target: 'city centre', ru: 'центр города' }, { target: 'free time', ru: 'свободное время' }
+    ],
+    phrases: [
+      { target: 'Could you repeat?', ru: 'Не могли бы вы повторить?' },
+      { target: 'What does this mean?', ru: 'Что это значит?' },
+      { target: 'How do you say it?', ru: 'Как это сказать?' },
+      { target: 'I do not understand.', ru: 'Я не понимаю.' },
+      { target: 'In my opinion...', ru: 'По моему мнению...' },
+      { target: 'I agree with you.', ru: 'Я с вами согласен.' },
+      { target: 'Could you help me?', ru: 'Не могли бы вы мне помочь?' },
+      { target: 'Let me think.', ru: 'Дайте мне подумать.' },
+      { target: 'It depends on...', ru: 'Это зависит от...' },
+      { target: 'That is a good idea.', ru: 'Это хорошая идея.' }
+    ]
+  },
+  es: {
+    concepts: [
+      { target: 'regla', ru: 'правило' }, { target: 'ejemplo', ru: 'пример' },
+      { target: 'razón', ru: 'причина' }, { target: 'resultado', ru: 'результат' },
+      { target: 'elección', ru: 'выбор' }, { target: 'plan', ru: 'план' },
+      { target: 'experiencia', ru: 'опыт' }, { target: 'opinión', ru: 'мнение' },
+      { target: 'problema', ru: 'проблема' }, { target: 'solución', ru: 'решение' }
+    ],
+    actions: [
+      { target: 'trabajar', ru: 'работать' }, { target: 'estudiar', ru: 'учиться' },
+      { target: 'vivir', ru: 'жить' }, { target: 'hablar', ru: 'говорить' },
+      { target: 'preguntar', ru: 'спрашивать' }, { target: 'responder', ru: 'отвечать' },
+      { target: 'elegir', ru: 'выбирать' }, { target: 'explicar', ru: 'объяснять' },
+      { target: 'comparar', ru: 'сравнивать' }, { target: 'recordar', ru: 'запоминать' }
+    ],
+    descriptions: [
+      { target: 'importante', ru: 'важный' }, { target: 'difícil', ru: 'сложный' },
+      { target: 'fácil', ru: 'лёгкий' }, { target: 'útil', ru: 'полезный' },
+      { target: 'correcto', ru: 'правильный' }, { target: 'diferente', ru: 'разный' },
+      { target: 'parecido', ru: 'похожий' }, { target: 'a menudo', ru: 'часто' },
+      { target: 'normalmente', ru: 'обычно' }, { target: 'con atención', ru: 'внимательно' }
+    ],
+    situations: [
+      { target: 'aula', ru: 'аудитория' }, { target: 'lugar de trabajo', ru: 'рабочее место' },
+      { target: 'viaje', ru: 'поездка' }, { target: 'reunión', ru: 'встреча' },
+      { target: 'conversación', ru: 'разговор' }, { target: 'tienda', ru: 'магазин' },
+      { target: 'estación', ru: 'станция' }, { target: 'casa', ru: 'дом' },
+      { target: 'centro de la ciudad', ru: 'центр города' }, { target: 'tiempo libre', ru: 'свободное время' }
+    ],
+    phrases: [
+      { target: '¿Puede repetir?', ru: 'Не могли бы вы повторить?' },
+      { target: '¿Qué significa esto?', ru: 'Что это значит?' },
+      { target: '¿Cómo se dice?', ru: 'Как это сказать?' },
+      { target: 'No entiendo.', ru: 'Я не понимаю.' },
+      { target: 'En mi opinión...', ru: 'По моему мнению...' },
+      { target: 'Estoy de acuerdo.', ru: 'Я согласен.' },
+      { target: '¿Puede ayudarme?', ru: 'Не могли бы вы мне помочь?' },
+      { target: 'Déjeme pensar.', ru: 'Дайте мне подумать.' },
+      { target: 'Depende de...', ru: 'Это зависит от...' },
+      { target: 'Es una buena idea.', ru: 'Это хорошая идея.' }
+    ]
+  },
+  tr: {
+    concepts: [
+      { target: 'kural', ru: 'правило' }, { target: 'örnek', ru: 'пример' },
+      { target: 'neden', ru: 'причина' }, { target: 'sonuç', ru: 'результат' },
+      { target: 'seçim', ru: 'выбор' }, { target: 'plan', ru: 'план' },
+      { target: 'deneyim', ru: 'опыт' }, { target: 'fikir', ru: 'мнение' },
+      { target: 'sorun', ru: 'проблема' }, { target: 'çözüm', ru: 'решение' }
+    ],
+    actions: [
+      { target: 'çalışmak', ru: 'работать' }, { target: 'öğrenmek', ru: 'учиться' },
+      { target: 'yaşamak', ru: 'жить' }, { target: 'konuşmak', ru: 'говорить' },
+      { target: 'sormak', ru: 'спрашивать' }, { target: 'cevaplamak', ru: 'отвечать' },
+      { target: 'seçmek', ru: 'выбирать' }, { target: 'açıklamak', ru: 'объяснять' },
+      { target: 'karşılaştırmak', ru: 'сравнивать' }, { target: 'hatırlamak', ru: 'запоминать' }
+    ],
+    descriptions: [
+      { target: 'önemli', ru: 'важный' }, { target: 'zor', ru: 'сложный' },
+      { target: 'kolay', ru: 'лёгкий' }, { target: 'yararlı', ru: 'полезный' },
+      { target: 'doğru', ru: 'правильный' }, { target: 'farklı', ru: 'разный' },
+      { target: 'benzer', ru: 'похожий' }, { target: 'sık sık', ru: 'часто' },
+      { target: 'genellikle', ru: 'обычно' }, { target: 'dikkatlice', ru: 'внимательно' }
+    ],
+    situations: [
+      { target: 'sınıf', ru: 'аудитория' }, { target: 'iş yeri', ru: 'рабочее место' },
+      { target: 'yolculuk', ru: 'поездка' }, { target: 'toplantı', ru: 'встреча' },
+      { target: 'konuşma', ru: 'разговор' }, { target: 'mağaza', ru: 'магазин' },
+      { target: 'istasyon', ru: 'станция' }, { target: 'ev', ru: 'дом' },
+      { target: 'şehir merkezi', ru: 'центр города' }, { target: 'boş zaman', ru: 'свободное время' }
+    ],
+    phrases: [
+      { target: 'Tekrar eder misiniz?', ru: 'Не могли бы вы повторить?' },
+      { target: 'Bu ne demek?', ru: 'Что это значит?' },
+      { target: 'Bu nasıl söylenir?', ru: 'Как это сказать?' },
+      { target: 'Anlamıyorum.', ru: 'Я не понимаю.' },
+      { target: 'Bence...', ru: 'По моему мнению...' },
+      { target: 'Size katılıyorum.', ru: 'Я с вами согласен.' },
+      { target: 'Bana yardım eder misiniz?', ru: 'Не могли бы вы мне помочь?' },
+      { target: 'Düşüneyim.', ru: 'Дайте мне подумать.' },
+      { target: 'Bu ... bağlı.', ru: 'Это зависит от...' },
+      { target: 'Bu iyi bir fikir.', ru: 'Это хорошая идея.' }
+    ]
+  },
+  ar: {
+    concepts: [
+      { target: 'قاعدة', ru: 'правило' }, { target: 'مثال', ru: 'пример' },
+      { target: 'سبب', ru: 'причина' }, { target: 'نتيجة', ru: 'результат' },
+      { target: 'اختيار', ru: 'выбор' }, { target: 'خطة', ru: 'план' },
+      { target: 'خبرة', ru: 'опыт' }, { target: 'رأي', ru: 'мнение' },
+      { target: 'مشكلة', ru: 'проблема' }, { target: 'حل', ru: 'решение' }
+    ],
+    actions: [
+      { target: 'يعمل', ru: 'работать' }, { target: 'يدرس', ru: 'учиться' },
+      { target: 'يعيش', ru: 'жить' }, { target: 'يتكلم', ru: 'говорить' },
+      { target: 'يسأل', ru: 'спрашивать' }, { target: 'يجيب', ru: 'отвечать' },
+      { target: 'يختار', ru: 'выбирать' }, { target: 'يشرح', ru: 'объяснять' },
+      { target: 'يقارن', ru: 'сравнивать' }, { target: 'يتذكر', ru: 'запоминать' }
+    ],
+    descriptions: [
+      { target: 'مهم', ru: 'важный' }, { target: 'صعب', ru: 'сложный' },
+      { target: 'سهل', ru: 'лёгкий' }, { target: 'مفيد', ru: 'полезный' },
+      { target: 'صحيح', ru: 'правильный' }, { target: 'مختلف', ru: 'разный' },
+      { target: 'مشابه', ru: 'похожий' }, { target: 'غالبًا', ru: 'часто' },
+      { target: 'عادةً', ru: 'обычно' }, { target: 'بعناية', ru: 'внимательно' }
+    ],
+    situations: [
+      { target: 'فصل دراسي', ru: 'аудитория' }, { target: 'مكان العمل', ru: 'рабочее место' },
+      { target: 'رحلة', ru: 'поездка' }, { target: 'اجتماع', ru: 'встреча' },
+      { target: 'محادثة', ru: 'разговор' }, { target: 'متجر', ru: 'магазин' },
+      { target: 'محطة', ru: 'станция' }, { target: 'بيت', ru: 'дом' },
+      { target: 'وسط المدينة', ru: 'центр города' }, { target: 'وقت الفراغ', ru: 'свободное время' }
+    ],
+    phrases: [
+      { target: 'هل يمكنك التكرار؟', ru: 'Не могли бы вы повторить?' },
+      { target: 'ماذا يعني هذا؟', ru: 'Что это значит?' },
+      { target: 'كيف نقول هذا؟', ru: 'Как это сказать?' },
+      { target: 'أنا لا أفهم.', ru: 'Я не понимаю.' },
+      { target: 'في رأيي...', ru: 'По моему мнению...' },
+      { target: 'أنا أوافقك الرأي.', ru: 'Я с вами согласен.' },
+      { target: 'هل يمكنك مساعدتي؟', ru: 'Не могли бы вы мне помочь?' },
+      { target: 'دعني أفكر.', ru: 'Дайте мне подумать.' },
+      { target: 'هذا يعتمد على...', ru: 'Это зависит от...' },
+      { target: 'هذه فكرة جيدة.', ru: 'Это хорошая идея.' }
+    ]
+  }
+};
+
 const STOPWORDS_BY_LANG = {
   en: new Set(['the', 'and', 'for', 'with', 'that', 'this', 'from', 'have', 'has', 'are', 'was', 'were', 'you', 'your', 'our', 'their', 'about', 'into', 'there', 'here']),
   es: new Set(['que', 'para', 'con', 'una', 'uno', 'los', 'las', 'del', 'por', 'como', 'esta', 'este', 'estos', 'estas', 'pero', 'muy', 'más', 'mas']),
@@ -1015,11 +1186,8 @@ function buildGuaranteedPlan() {
 
 function composeGuaranteedStep(point, section, index, pack, langKey, path) {
   const module = pickModuleForSection(pack, section, index, langKey);
-  const vocabulary = buildGuaranteedVocabulary(section.chunk, module, langKey, index);
-  const vocabularyGroups = Array.from({ length: 5 }, (_, groupIndex) => ({
-    title: ['Основные понятия', 'Действия', 'Признаки и описания', 'Ситуации общения', 'Устойчивые фразы'][groupIndex],
-    items: vocabulary.slice(groupIndex * 8, groupIndex * 8 + 8)
-  }));
+  const vocabularyGroups = buildGuaranteedVocabularyGroups(section.chunk, module, langKey, index);
+  const vocabulary = vocabularyGroups.flatMap(group => group.items);
   const examples = (module.grammarExamples || []).slice(0, 4);
   const grammarRule = [
     point.grammarRule,
@@ -1062,8 +1230,9 @@ function composeGuaranteedStep(point, section, index, pack, langKey, path) {
   };
 }
 
-function buildGuaranteedVocabulary(chunk, module, langKey, lessonIndex) {
+function buildGuaranteedVocabularyGroups(chunk, module, langKey, lessonIndex) {
   const glossary = GLOSSARY_BY_LANG[langKey] || GLOSSARY_BY_LANG.en;
+  const lexicalBank = LEXICAL_BANK_BY_LANG[langKey] || LEXICAL_BANK_BY_LANG.en;
   const extracted = extractTopicVocabulary(chunk, langKey, module.vocab);
   const pool = [
     ...extracted,
@@ -1073,11 +1242,68 @@ function buildGuaranteedVocabulary(chunk, module, langKey, lessonIndex) {
   const uniquePool = uniqueObjects(pool, item =>
     `${normalizeLookupToken(item.target, langKey)}|${normalizeLookupToken(item.ru, 'en')}`
   );
-  if (!uniquePool.length) return [];
-  const offset = (lessonIndex * 7) % uniquePool.length;
-  return Array.from({ length: Math.min(40, uniquePool.length) }, (_, index) =>
-    uniquePool[(offset + index) % uniquePool.length]
+  const categories = {
+    concepts: [],
+    actions: [],
+    descriptions: [],
+    situations: [],
+    phrases: []
+  };
+
+  uniquePool.forEach(item => {
+    categories[classifyVocabularyPair(item, langKey)].push(item);
+  });
+
+  const definitions = [
+    ['concepts', 'Основные понятия'],
+    ['actions', 'Действия'],
+    ['descriptions', 'Признаки и описания'],
+    ['situations', 'Ситуации общения'],
+    ['phrases', 'Устойчивые фразы']
+  ];
+
+  return definitions.map(([key, title], groupIndex) => {
+    const lessonWords = rotateVocabulary(categories[key], lessonIndex * 3 + groupIndex);
+    const bankWords = rotateVocabulary(lexicalBank[key] || [], lessonIndex * 2 + groupIndex);
+    return {
+      title,
+      items: uniqueObjects([...lessonWords, ...bankWords], item =>
+        `${normalizeLookupToken(item.target, langKey)}|${normalizeLookupToken(item.ru, 'en')}`
+      ).slice(0, 8)
+    };
+  });
+}
+
+function rotateVocabulary(items, offset) {
+  if (!items.length) return [];
+  const start = offset % items.length;
+  return items.slice(start).concat(items.slice(0, start));
+}
+
+function classifyVocabularyPair(item, langKey) {
+  const target = String(item?.target || '').trim().toLocaleLowerCase();
+  const ru = String(item?.ru || '').trim().toLocaleLowerCase();
+  const actionByRussian = /(ть|ться)$/.test(ru);
+  const actionByLanguage = (
+    (langKey === 'en' && /^to\s+\S+/.test(target)) ||
+    (langKey === 'es' && /(ar|er|ir)$/.test(target)) ||
+    (langKey === 'tr' && /(mak|mek)$/.test(target))
   );
+  if (actionByRussian || actionByLanguage) return 'actions';
+
+  const descriptionByRussian = /(ый|ий|ой|ая|яя|ое|ее|ые|ие|о)$/.test(ru);
+  if (descriptionByRussian) return 'descriptions';
+
+  const phraseLike = /[.!?؟]/.test(target) || target.split(/\s+/).length >= 3 || ru.split(/\s+/).length >= 3;
+  if (phraseLike) return 'phrases';
+
+  const situationWords = [
+    'дом', 'город', 'место', 'школа', 'университет', 'магазин', 'станция',
+    'встреча', 'разговор', 'поездка', 'работа', 'семья', 'время', 'урок'
+  ];
+  if (situationWords.some(word => ru.includes(word))) return 'situations';
+
+  return 'concepts';
 }
 
 function buildGuaranteedTasks(point, examples, vocabulary, lessonIndex = 0) {
