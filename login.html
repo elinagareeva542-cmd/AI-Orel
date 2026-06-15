@@ -1,356 +1,267 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Вход / Регистрация</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-        }
-
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .auth-card {
-            background: white;
-            border-radius: 28px;
-            box-shadow: 0 25px 45px -12px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 460px;
-            overflow: hidden;
-            transition: all 0.2s ease;
-        }
-
-        .tabs {
-            display: flex;
-            border-bottom: 1px solid #eef2f6;
-            background: #fafcff;
-        }
-
-        .tab-btn {
-            flex: 1;
-            text-align: center;
-            padding: 18px 12px;
-            font-size: 1.2rem;
-            font-weight: 600;
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            color: #5b677b;
-            transition: all 0.2s;
-            letter-spacing: 0.3px;
-        }
-
-        .tab-btn.active {
-            color: #4f46e5;
-            border-bottom: 3px solid #4f46e5;
-            background: white;
-        }
-
-        .tab-btn:not(.active):hover {
-            color: #1f2937;
-            background: #f1f5f9;
-        }
-
-        .form-container {
-            padding: 32px 28px 38px;
-        }
-
-        .auth-form {
-            display: none;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .auth-form.active-form {
-            display: flex;
-        }
-
-        .input-group {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .input-group label {
-            font-size: 0.85rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #334155;
-        }
-
-        .input-group input {
-            padding: 14px 16px;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 20px;
-            font-size: 1rem;
-            transition: 0.2s;
-            background: #fff;
-            outline: none;
-        }
-
-        .input-group input:focus {
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
-        }
-
-        .btn-submit {
-            background: #4f46e5;
-            color: white;
-            border: none;
-            padding: 14px 18px;
-            font-size: 1rem;
-            font-weight: 600;
-            border-radius: 40px;
-            cursor: pointer;
-            transition: 0.2s;
-            margin-top: 8px;
-            letter-spacing: 0.3px;
-        }
-
-        .btn-submit:hover {
-            background: #4338ca;
-            transform: scale(0.98);
-        }
-
-        .info-text {
-            text-align: center;
-            font-size: 0.8rem;
-            color: #5b6e8c;
-            margin-top: 8px;
-        }
-
-        .error-msg {
-            color: #dc2626;
-            font-size: 0.75rem;
-            margin-top: 4px;
-            min-height: 18px;
-        }
-
-        hr {
-            margin: 8px 0 4px;
-            border: none;
-            border-top: 1px solid #edf2f7;
-        }
-
-        @media (max-width: 500px) {
-            .form-container {
-                padding: 24px 20px;
-            }
-            .tab-btn {
-                padding: 14px 8px;
-                font-size: 1rem;
-            }
-            .btn-submit {
-                padding: 12px 16px;
-            }
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Регистрация | Lingua Path</title>
+  <script>
+    if (window.location.protocol === 'file:') {
+      window.location.replace('http://127.0.0.1:8000/login.html');
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=IBM+Plex+Serif:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #fffaf0;
+      --ink: #3d2f38;
+      --muted: #7f6a75;
+      --accent: #ef8fb1;
+      --accent-dark: #d96a9a;
+      --accent-2: #ffd978;
+      --card: rgba(255, 255, 255, .86);
+      --line: rgba(61, 47, 56, .12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      overflow-x: hidden;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 10% 14%, #ffdce9 0 18%, transparent 40%),
+        radial-gradient(circle at 86% 24%, #fff1b8 0 16%, transparent 34%),
+        var(--bg);
+      font-family: "Manrope", sans-serif;
+    }
+    body::before,
+    body::after {
+      position: fixed;
+      z-index: -1;
+      width: 340px;
+      height: 340px;
+      border-radius: 50%;
+      filter: blur(32px);
+      opacity: .45;
+      content: "";
+    }
+    body::before {
+      top: -90px;
+      right: -80px;
+      background: #ffb7d2;
+    }
+    body::after {
+      bottom: -100px;
+      left: -80px;
+      background: #ffe8a3;
+    }
+    .auth-card {
+      width: min(470px, 100%);
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: var(--card);
+      box-shadow: 0 10px 24px rgba(61, 47, 56, .07);
+      backdrop-filter: blur(8px);
+      animation: rise .45s ease both;
+    }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .brand { padding: 30px 28px 0; text-align: center; }
+    .brand::before {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--accent-dark);
+      font-size: .78rem;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      content: "Lingua Path";
+    }
+    .brand h1 {
+      margin: 0 0 8px;
+      font-family: "IBM Plex Serif", serif;
+      font-size: clamp(1.8rem, 6vw, 2.25rem);
+      line-height: 1.15;
+    }
+    .brand p { margin: 0; color: var(--muted); font-size: .92rem; line-height: 1.5; }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin: 24px 28px 0;
+      padding: 5px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .55);
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      color: var(--muted);
+      background: transparent;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      transition: .2s ease;
+    }
+    .tab-btn.active {
+      border-color: rgba(239, 143, 177, .28);
+      color: var(--ink);
+      background: #fff;
+      box-shadow: 0 5px 14px rgba(61, 47, 56, .08);
+    }
+    .form-container { padding: 28px; }
+    .auth-form { display: none; gap: 18px; }
+    .auth-form.active { display: grid; }
+    .input-group { display: grid; gap: 7px; }
+    label { color: var(--ink); font-size: .9rem; font-weight: 700; }
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, .9);
+      font: inherit;
+      outline: none;
+      transition: .2s border-color, .2s box-shadow;
+    }
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(239, 143, 177, .17);
+    }
+    .submit {
+      padding: 12px 18px;
+      border: 0;
+      border-radius: 999px;
+      color: #fff;
+      background: linear-gradient(135deg, var(--accent), #f4a6c3);
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 8px 18px rgba(217, 106, 154, .2);
+      transition: .2s transform, .2s box-shadow;
+    }
+    .submit:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(217, 106, 154, .26); }
+    .submit:disabled { opacity: .65; cursor: wait; }
+    .message { min-height: 22px; margin: 0; color: #9a3b62; font-size: .9rem; }
+    .message.success { color: #15803d; }
+    .hint { margin: -7px 0 0; color: var(--muted); font-size: .8rem; }
+    @media (max-width: 520px) {
+      .brand { padding-inline: 20px; }
+      .tabs { margin-inline: 20px; }
+      .form-container { padding: 24px 20px; }
+    }
+  </style>
 </head>
 <body>
+  <main class="auth-card">
+    <div class="brand">
+      <h1>Добро пожаловать</h1>
+      <p>Сначала регистрация, затем откроется основная страница с заданиями</p>
+    </div>
 
-<div class="auth-card">
     <div class="tabs">
-        <button class="tab-btn active" data-tab="login">Вход</button>
-        <button class="tab-btn" data-tab="register">Регистрация</button>
+      <button class="tab-btn active" type="button" data-tab="register">Регистрация</button>
+      <button class="tab-btn" type="button" data-tab="login">Вход</button>
     </div>
 
     <div class="form-container">
-        <!-- Форма входа -->
-        <form id="login-form" class="auth-form active-form" action="#" method="post">
-            <div class="input-group">
-                <label>Логин или Email</label>
-                <input type="text" id="login_username" placeholder="username@example.com или логин" required>
-                <div class="error-msg" id="login_user_error"></div>
-            </div>
-            <div class="input-group">
-                <label>Пароль</label>
-                <input type="password" id="login_password" placeholder="••••••••" required>
-                <div class="error-msg" id="login_pass_error"></div>
-            </div>
-            <button type="submit" class="btn-submit">Войти</button>
-        </form>
+      <form id="registerForm" class="auth-form active">
+        <div class="input-group">
+          <label for="regUsername">Логин</label>
+          <input id="regUsername" name="username" autocomplete="username" minlength="3" maxlength="32" required />
+        </div>
+        <div class="input-group">
+          <label for="regEmail">Email</label>
+          <input id="regEmail" name="email" type="email" autocomplete="email" required />
+        </div>
+        <div class="input-group">
+          <label for="regPassword">Пароль</label>
+          <input id="regPassword" name="password" type="password" autocomplete="new-password" minlength="8" required />
+          <p class="hint">Не менее 8 символов</p>
+        </div>
+        <button class="submit" type="submit">Зарегистрироваться</button>
+        <p id="registerMessage" class="message" role="alert"></p>
+      </form>
 
-        <!-- Форма регистрации (без подтверждения пароля) -->
-        <form id="register-form" class="auth-form" action="#" method="post">
-            <div class="input-group">
-                <label>Логин</label>
-                <input type="text" id="reg_username" placeholder="например: ivan_petrov" required>
-                <div class="error-msg" id="reg_user_error"></div>
-            </div>
-            <div class="input-group">
-                <label>Email</label>
-                <input type="email" id="reg_email" placeholder="my@email.com" required>
-                <div class="error-msg" id="reg_email_error"></div>
-            </div>
-            <div class="input-group">
-                <label>Пароль</label>
-                <input type="password" id="reg_password" placeholder="минимум 4 символа" required>
-                <div class="error-msg" id="reg_pass_error"></div>
-            </div>
-            <button type="submit" class="btn-submit">Зарегистрироваться</button>
-        </form>
+      <form id="loginForm" class="auth-form">
+        <div class="input-group">
+          <label for="loginName">Логин или email</label>
+          <input id="loginName" name="login" autocomplete="username" required />
+        </div>
+        <div class="input-group">
+          <label for="loginPassword">Пароль</label>
+          <input id="loginPassword" name="password" type="password" autocomplete="current-password" required />
+        </div>
+        <button class="submit" type="submit">Войти</button>
+        <p id="loginMessage" class="message" role="alert"></p>
+      </form>
     </div>
-</div>
+  </main>
 
-<script>
-    // Переключение вкладок
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    const forms = document.querySelectorAll('.auth-form');
-    
-    function switchTab(tabId) {
-        forms.forEach(form => form.classList.remove('active-form'));
-        if (tabId === 'login') {
-            document.getElementById('login-form').classList.add('active-form');
-        } else {
-            document.getElementById('register-form').classList.add('active-form');
-        }
-        tabBtns.forEach(btn => {
-            if (btn.dataset.tab === tabId) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
+  <script>
+    const tabs = document.querySelectorAll('[data-tab]');
+    const forms = {
+      register: document.getElementById('registerForm'),
+      login: document.getElementById('loginForm')
+    };
+
+    function switchTab(name) {
+      tabs.forEach((tab) => tab.classList.toggle('active', tab.dataset.tab === name));
+      Object.entries(forms).forEach(([key, form]) => form.classList.toggle('active', key === name));
+      document.querySelectorAll('.message').forEach((message) => {
+        message.textContent = '';
+        message.classList.remove('success');
+      });
+    }
+
+    tabs.forEach((tab) => tab.addEventListener('click', () => switchTab(tab.dataset.tab)));
+
+    async function sendForm(url, payload, form, messageElement) {
+      const button = form.querySelector('button[type="submit"]');
+      button.disabled = true;
+      messageElement.textContent = '';
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
         });
-        clearAllErrors();
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Не удалось выполнить запрос.');
+        window.location.replace('/index.html');
+      } catch (error) {
+        messageElement.textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
     }
-    
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const tab = btn.dataset.tab;
-            switchTab(tab);
-        });
+
+    forms.register.addEventListener('submit', (event) => {
+      event.preventDefault();
+      sendForm('/api/register', {
+        username: document.getElementById('regUsername').value.trim(),
+        email: document.getElementById('regEmail').value.trim(),
+        password: document.getElementById('regPassword').value
+      }, forms.register, document.getElementById('registerMessage'));
     });
-    
-    function clearAllErrors() {
-        const errorSpans = document.querySelectorAll('.error-msg');
-        errorSpans.forEach(span => span.innerText = '');
-    }
-    
-    function showError(elementId, message) {
-        const errorEl = document.getElementById(elementId);
-        if(errorEl) errorEl.innerText = message;
-    }
-    
-    // Валидация входа
-    function validateLogin() {
-        let isValid = true;
-        const loginVal = document.getElementById('login_username').value.trim();
-        const passVal = document.getElementById('login_password').value.trim();
-        
-        if(!loginVal) {
-            showError('login_user_error', '❌ Введите логин или email');
-            isValid = false;
-        } else {
-            showError('login_user_error', '');
-        }
-        
-        if(!passVal) {
-            showError('login_pass_error', '❌ Введите пароль');
-            isValid = false;
-        } else if(passVal.length < 4) {
-            showError('login_pass_error', '❌ Пароль должен быть не менее 4 символов');
-            isValid = false;
-        } else {
-            showError('login_pass_error', '');
-        }
-        return isValid;
-    }
-    
-    // Валидация регистрации (без подтверждения пароля)
-    function validateRegister() {
-        let isValid = true;
-        const username = document.getElementById('reg_username').value.trim();
-        const email = document.getElementById('reg_email').value.trim();
-        const password = document.getElementById('reg_password').value;
-        
-        // Логин
-        if(!username) {
-            showError('reg_user_error', '❌ Укажите логин');
-            isValid = false;
-        } else if(username.length < 3) {
-            showError('reg_user_error', '❌ Логин не менее 3 символов');
-            isValid = false;
-        } else {
-            showError('reg_user_error', '');
-        }
-        
-        // Email
-        const emailPattern = /^[^\s@]+@([^\s@]+\.)+[^\s@]+$/;
-        if(!email) {
-            showError('reg_email_error', '❌ Введите email');
-            isValid = false;
-        } else if(!emailPattern.test(email)) {
-            showError('reg_email_error', '❌ Некорректный email (пример: name@domain.com)');
-            isValid = false;
-        } else {
-            showError('reg_email_error', '');
-        }
-        
-        // Пароль
-        if(!password) {
-            showError('reg_pass_error', '❌ Придумайте пароль');
-            isValid = false;
-        } else if(password.length < 4) {
-            showError('reg_pass_error', '❌ Пароль должен быть не менее 4 символов');
-            isValid = false;
-        } else {
-            showError('reg_pass_error', '');
-        }
-        
-        return isValid;
-    }
-    
-    // Обработчики отправки форм
-    const loginForm = document.getElementById('login-form');
-    const registerForm = document.getElementById('register-form');
-    
-    loginForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        if(validateLogin()) {
-            const loginField = document.getElementById('login_username').value;
-            alert(`✅ Добро пожаловать, ${loginField}!`);
-            // Здесь мог бы быть реальный запрос к серверу
-        }
+
+    forms.login.addEventListener('submit', (event) => {
+      event.preventDefault();
+      sendForm('/api/login', {
+        login: document.getElementById('loginName').value.trim(),
+        password: document.getElementById('loginPassword').value
+      }, forms.login, document.getElementById('loginMessage'));
     });
-    
-    registerForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        if(validateRegister()) {
-            const newUser = document.getElementById('reg_username').value;
-            alert(`🎉 Регистрация выполнена!\nПользователь "${newUser}" создан. Теперь войдите через вкладку "Вход".`);
-            // Очистка полей регистрации
-            document.getElementById('reg_username').value = '';
-            document.getElementById('reg_email').value = '';
-            document.getElementById('reg_password').value = '';
-            clearAllErrors();
-            // Переключение на форму входа
-            switchTab('login');
-        }
-    });
-    
-    // Очистка ошибок при вводе
-    const allInputs = document.querySelectorAll('input');
-    allInputs.forEach(input => {
-        input.addEventListener('input', function() {
-            const parentGroup = this.closest('.input-group');
-            if(parentGroup) {
-                const errorMsgDiv = parentGroup.querySelector('.error-msg');
-                if(errorMsgDiv) errorMsgDiv.innerText = '';
-            }
-        });
-    });
-</script>
+  </script>
 </body>
 </html>

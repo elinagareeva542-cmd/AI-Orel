@@ -1,20 +1,16 @@
 const ui = {
-  authOverlay: document.getElementById('authOverlay'),
-  authEmail: document.getElementById('authEmail'),
-  authPassword: document.getElementById('authPassword'),
-  loginBtn: document.getElementById('loginBtn'),
-  registerBtn: document.getElementById('registerBtn'),
-  googleSignInWrap: document.getElementById('googleSignInWrap'),
-  authMsg: document.getElementById('authMsg'),
+  logoutBtn: document.getElementById('logoutBtn'),
   fileInput: document.getElementById('fileInput'),
   dropzone: document.getElementById('dropzone'),
   fileList: document.getElementById('fileList'),
   extractStatus: document.getElementById('extractStatus'),
-  parseMode: document.getElementById('parseMode'),
   language: document.getElementById('language'),
   level: document.getElementById('level'),
   targetLevel: document.getElementById('targetLevel'),
   hours: document.getElementById('hours'),
+  confirmProfileBtn: document.getElementById('confirmProfileBtn'),
+  profileStatus: document.getElementById('profileStatus'),
+  dropzoneText: document.getElementById('dropzoneText'),
   timerMinutes: document.getElementById('timerMinutes'),
   timerView: document.getElementById('timerView'),
   startTimerBtn: document.getElementById('startTimerBtn'),
@@ -24,34 +20,23 @@ const ui = {
   nextTopicBtn: document.getElementById('nextTopicBtn'),
   completeTopicBtn: document.getElementById('completeTopicBtn'),
   checkTasksBtn: document.getElementById('checkTasksBtn'),
-  aiQuizBtn: document.getElementById('aiQuizBtn'),
   checkQuizBtn: document.getElementById('checkQuizBtn'),
-  approveCardsBtn: document.getElementById('approveCardsBtn'),
-  exportAnkiBtn: document.getElementById('exportAnkiBtn'),
   roadmapPanel: document.getElementById('roadmapPanel'),
   tasksPanel: document.getElementById('tasksPanel'),
   quizPanel: document.getElementById('quizPanel'),
-  cardsPanel: document.getElementById('cardsPanel'),
   roadmap: document.getElementById('roadmap'),
   planSummary: document.getElementById('planSummary'),
   activeTopic: document.getElementById('activeTopic'),
   topicGuide: document.getElementById('topicGuide'),
-  bookExercises: document.getElementById('bookExercises'),
   tasks: document.getElementById('tasks'),
   taskFeedback: document.getElementById('taskFeedback'),
   quiz: document.getElementById('quiz'),
-  quizResult: document.getElementById('quizResult'),
-  pendingCards: document.getElementById('pendingCards')
+  quizResult: document.getElementById('quizResult')
 };
 
-const STORAGE_KEY = 'lingua-path-state-v9';
-const USERS_KEY = 'lingua-users-v1';
-const GOOGLE_CLIENT_ID = 'PASTE_GOOGLE_CLIENT_ID_HERE';
+const STORAGE_KEY = 'lingua-path-state-v10';
 
-const PDF_MODE = {
-  fast: { pageLimit: 15, ocrLimit: 4, scale: 1.3 },
-  accurate: { pageLimit: 180, ocrLimit: 120, scale: 2.1 }
-};
+const PDF_CONFIG = { ocrSamples: 8, scale: 1.5 };
 
 const LANGUAGE_KEY_BY_LABEL = {
   'Английский': 'en',
@@ -474,110 +459,110 @@ const state = {
   materialThemes: [],
   steps: [],
   currentStep: 0,
-  pendingCards: [],
-  approvedCards: [],
   streak: 0,
   lastActiveDate: null,
   timerSeconds: 1500,
   timerRunning: false,
   timerDefaultMinutes: 25,
-  authUser: null,
-  parseMode: 'accurate',
+  profileConfirmed: false,
+  planBuilding: false,
   profile: { language: 'Английский', level: 'A1', targetLevel: 'B1', hours: 5 }
 };
 
 let timerId = null;
 bindEvents();
 restoreState();
-initGoogleAuth();
 renderAll();
 
 function bindEvents() {
-  ui.registerBtn.addEventListener('click', registerUser);
-  ui.loginBtn.addEventListener('click', loginUser);
+  ui.logoutBtn.addEventListener('click', logoutUser);
+  ui.confirmProfileBtn.addEventListener('click', confirmProfile);
   ui.fileInput.addEventListener('change', async (e) => handleSelectedFiles(Array.from(e.target.files || [])));
-  ui.dropzone.addEventListener('dragover', (e) => { e.preventDefault(); ui.dropzone.classList.add('drag'); });
+  ui.dropzone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    if (state.profileConfirmed) ui.dropzone.classList.add('drag');
+  });
   ui.dropzone.addEventListener('dragleave', () => ui.dropzone.classList.remove('drag'));
   ui.dropzone.addEventListener('drop', async (e) => {
     e.preventDefault();
     ui.dropzone.classList.remove('drag');
+    if (!state.profileConfirmed) {
+      ui.profileStatus.textContent = 'Сначала подтвердите язык и уровни.';
+      return;
+    }
     await handleSelectedFiles(Array.from(e.dataTransfer?.files || []));
   });
   ui.buildPlanBtn.addEventListener('click', buildPlanFlow);
   ui.nextTopicBtn.addEventListener('click', nextTopic);
   ui.completeTopicBtn.addEventListener('click', completeTopic);
   ui.checkTasksBtn.addEventListener('click', checkTaskAnswers);
-  ui.aiQuizBtn.addEventListener('click', generateAiQuiz);
   ui.checkQuizBtn.addEventListener('click', checkQuiz);
-  ui.approveCardsBtn.addEventListener('click', approveSelectedCards);
-  ui.exportAnkiBtn.addEventListener('click', exportAnkiCsv);
   ui.startTimerBtn.addEventListener('click', startTimer);
   ui.pauseTimerBtn.addEventListener('click', pauseTimer);
   ui.resetTimerBtn.addEventListener('click', resetTimer);
-  if (ui.parseMode) {
-    ui.parseMode.addEventListener('change', () => {
-      state.parseMode = ui.parseMode.value || 'accurate';
-      persistState();
-    });
-  }
-}
-
-function initGoogleAuth() {
-  if (!window.google || GOOGLE_CLIENT_ID === 'PASTE_GOOGLE_CLIENT_ID_HERE') return;
-  window.google.accounts.id.initialize({
-    client_id: GOOGLE_CLIENT_ID,
-    callback: handleGoogleCredential
-  });
-  window.google.accounts.id.renderButton(ui.googleSignInWrap, {
-    theme: 'outline',
-    size: 'large',
-    text: 'signin_with'
+  [ui.language, ui.level, ui.targetLevel, ui.hours].forEach((control) => {
+    control.addEventListener('change', invalidateProfile);
   });
 }
 
-function handleGoogleCredential(response) {
-  try {
-    const payload = JSON.parse(atob(response.credential.split('.')[1]));
-    state.authUser = payload.email || payload.sub;
-    ui.authOverlay.style.display = 'none';
-    persistState();
-  } catch {
-    ui.authMsg.textContent = 'Ошибка входа через Google.';
+function confirmProfile() {
+  const levelOrder = { A0: 0, A1: 1, A2: 2, B1: 3, B2: 4, C1: 5, C2: 6 };
+  if ((levelOrder[ui.targetLevel.value] ?? 0) < (levelOrder[ui.level.value] ?? 0)) {
+    ui.profileStatus.textContent = 'Желаемый уровень не может быть ниже текущего.';
+    return;
   }
-}
+  const hours = Number(ui.hours.value);
+  if (!Number.isFinite(hours) || hours < 1 || hours > 30) {
+    ui.profileStatus.textContent = 'Укажите от 1 до 30 часов занятий в неделю.';
+    return;
+  }
 
-function registerUser() {
-  const email = ui.authEmail.value.trim().toLowerCase();
-  const password = ui.authPassword.value;
-  if (!email || !password) {
-    ui.authMsg.textContent = 'Введите email и пароль.';
-    return;
-  }
-  const users = JSON.parse(localStorage.getItem(USERS_KEY) || '{}');
-  if (users[email]) {
-    ui.authMsg.textContent = 'Пользователь уже существует.';
-    return;
-  }
-  users[email] = { password };
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  ui.authMsg.textContent = 'Регистрация успешна. Теперь войдите.';
-}
+  const previous = JSON.stringify(state.profile);
+  syncProfile();
+  state.profileConfirmed = true;
+  setUploadAvailability();
+  ui.profileStatus.textContent = `Выбрано: ${state.profile.language}, ${state.profile.level} → ${state.profile.targetLevel}, ${state.profile.hours} ч/нед.`;
 
-function loginUser() {
-  const email = ui.authEmail.value.trim().toLowerCase();
-  const password = ui.authPassword.value;
-  const users = JSON.parse(localStorage.getItem(USERS_KEY) || '{}');
-  if (!users[email] || users[email].password !== password) {
-    ui.authMsg.textContent = 'Неверные данные.';
-    return;
+  if (state.extractedText && previous !== JSON.stringify(state.profile)) {
+    state.files = [];
+    state.extractedText = '';
+    state.materialThemes = [];
+    state.steps = [];
+    state.currentStep = 0;
+    ui.extractStatus.textContent = 'Параметры изменены. Загрузите учебник заново.';
+    renderAll();
   }
-  state.authUser = email;
-  ui.authOverlay.style.display = 'none';
   persistState();
+}
+
+function invalidateProfile() {
+  state.profileConfirmed = false;
+  ui.profileStatus.textContent = 'Подтвердите изменённые параметры перед загрузкой.';
+  setUploadAvailability();
+}
+
+function setUploadAvailability() {
+  ui.fileInput.disabled = !state.profileConfirmed;
+  ui.dropzone.classList.toggle('locked', !state.profileConfirmed);
+  ui.dropzoneText.textContent = state.profileConfirmed
+    ? 'Нажмите или перетащите учебник сюда'
+    : 'Сначала подтвердите язык и уровни';
+}
+
+async function logoutUser() {
+  try {
+    await fetch('/api/logout', { method: 'POST' });
+  } finally {
+    window.location.replace('/login.html');
+  }
 }
 
 async function handleSelectedFiles(files) {
   if (!files.length) return;
+  if (!state.profileConfirmed) {
+    ui.profileStatus.textContent = 'Сначала подтвердите язык и уровни.';
+    return;
+  }
   state.files = files;
   state.extractedText = '';
   state.materialThemes = [];
@@ -593,13 +578,15 @@ async function handleSelectedFiles(files) {
     state.detectedLang = detectLanguage(state.extractedText);
     const selectedLang = state.detectedLang !== 'unknown' ? state.detectedLang : getLanguageKey(state.profile.language);
     state.materialThemes = extractThemesInOrder(state.extractedText, selectedLang);
-    ui.extractStatus.textContent = `Обработано ${i + 1}/${files.length}. Язык: ${LANGUAGE_LABEL_BY_KEY[state.detectedLang] || 'не определен'}. Найдено тем: ${state.materialThemes.length}.`;
-    ui.buildPlanBtn.disabled = state.materialThemes.length === 0;
+    ui.extractStatus.textContent = `Обработано ${i + 1}/${files.length}. Учебник готов к анализу нейросетью.`;
     persistState();
   }
 
-  ui.extractStatus.textContent = `Готово. Язык: ${LANGUAGE_LABEL_BY_KEY[state.detectedLang] || 'не определен'}. Найдено тем: ${state.materialThemes.length}. Можно строить план.`;
-  ui.buildPlanBtn.disabled = state.materialThemes.length === 0;
+  state.steps = [];
+  state.currentStep = 0;
+  ui.extractStatus.textContent = 'Учебник загружен. Нажмите «Построить план».';
+  ui.buildPlanBtn.disabled = !state.extractedText.trim();
+  renderAll();
 }
 
 async function extractTextFromSingleFile(file, fileNo, totalFiles) {
@@ -620,7 +607,10 @@ async function extractTextFromSingleFile(file, fileNo, totalFiles) {
     try {
       const arr = await file.arrayBuffer();
       return await parsePdf(arr, (page, totalPages, mode) => {
-        ui.extractStatus.textContent = `Файл ${fileNo}/${totalFiles}: страница ${page}/${totalPages} (${mode})`;
+        const progress = mode.startsWith('OCR')
+          ? `${mode} (образец ${page}/${totalPages})`
+          : `${mode}: страница ${page} из ${totalPages}`;
+        ui.extractStatus.textContent = `Файл ${fileNo}/${totalFiles}: ${progress}`;
       });
     } catch {
       return '';
@@ -633,44 +623,72 @@ async function parsePdf(arrayBuffer, statusCb) {
   const pdfjsLib = await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/build/pdf.min.mjs');
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/build/pdf.worker.min.mjs';
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  const cfg = getPdfModeConfig();
-  const pageLimit = Math.min(cfg.pageLimit, pdf.numPages);
-  let usedOcr = 0;
-  const chunks = [];
+  const cfg = PDF_CONFIG;
+  const pageCount = pdf.numPages;
+  let ocrWorker = null;
+  const chunks = new Array(pageCount).fill('');
+  const scannedPages = [];
 
-  for (let p = 1; p <= pageLimit; p += 1) {
-    const page = await pdf.getPage(p);
-    const textContent = await page.getTextContent();
-    const textLayer = extractPageTextLines(textContent.items);
-    const cleaned = normalizeExtractedText(textLayer);
-    if (!isGarbageText(cleaned)) {
-      chunks.push(cleaned);
-      if (statusCb) statusCb(p, pageLimit, 'text');
-      continue;
+  try {
+    for (let p = 1; p <= pageCount; p += 1) {
+      const page = await pdf.getPage(p);
+      const textContent = await page.getTextContent();
+      const textLayer = extractPageTextLines(textContent.items);
+      const cleaned = normalizeExtractedText(textLayer);
+      if (!isGarbageText(cleaned)) {
+        chunks[p - 1] = cleaned;
+      } else {
+        scannedPages.push(p);
+      }
+      if (statusCb) statusCb(p, pageCount, 'чтение страниц');
     }
-    if (usedOcr >= cfg.ocrLimit) {
-      if (statusCb) statusCb(p, pageLimit, 'skip');
-      continue;
+
+    const pagesForOcr = pickEvenlySpaced(scannedPages, cfg.ocrSamples);
+    for (let index = 0; index < pagesForOcr.length; index += 1) {
+      const pageNumber = pagesForOcr[index];
+      const page = await pdf.getPage(pageNumber);
+      if (!ocrWorker) ocrWorker = await createOcrWorker();
+      const ocrText = await ocrPdfPage(page, cfg.scale, ocrWorker);
+      chunks[pageNumber - 1] = normalizeExtractedText(ocrText);
+      if (statusCb) statusCb(index + 1, pagesForOcr.length, `OCR, страница ${pageNumber} из ${pageCount}`);
     }
-    usedOcr += 1;
-    const ocrText = await ocrPdfPage(page, cfg.scale);
-    chunks.push(normalizeExtractedText(ocrText));
-    if (statusCb) statusCb(p, pageLimit, 'ocr');
+  } finally {
+    if (ocrWorker) await ocrWorker.terminate();
   }
 
-  return chunks.join('\n');
+  return chunks.filter(Boolean).join('\n');
 }
 
-async function ocrPdfPage(page, scale) {
-  if (!window.Tesseract) return '';
+function pickEvenlySpaced(items, limit) {
+  if (items.length <= limit) return items;
+  if (limit <= 1) return [items[0]];
+  return Array.from({ length: limit }, (_, index) => {
+    const position = Math.round(index * (items.length - 1) / (limit - 1));
+    return items[position];
+  });
+}
+
+async function createOcrWorker() {
+  if (!window.Tesseract) return null;
+  const languageByProfile = {
+    'Английский': 'eng',
+    'Испанский': 'spa',
+    'Турецкий': 'tur',
+    'Арабский': 'ara'
+  };
+  const language = languageByProfile[state.profile.language] || 'eng';
+  return window.Tesseract.createWorker(language);
+}
+
+async function ocrPdfPage(page, scale, worker) {
+  if (!worker) return '';
   const viewport = page.getViewport({ scale });
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   canvas.width = Math.floor(viewport.width);
   canvas.height = Math.floor(viewport.height);
   await page.render({ canvasContext: ctx, viewport }).promise;
-  const lang = 'eng+spa+tur+ara';
-  const result = await window.Tesseract.recognize(canvas, lang);
+  const result = await worker.recognize(canvas);
   return result?.data?.text || '';
 }
 
@@ -742,8 +760,7 @@ function buildSectionFromLines(lines, langKey) {
   return {
     title,
     chunk,
-    summary: summarizeChunk(chunk),
-    exercises: extractExercisesFromLines(bodyLines, langKey)
+    summary: summarizeChunk(chunk)
   };
 }
 
@@ -771,39 +788,6 @@ function summarizeChunk(chunk) {
     .map(s => s.trim())
     .filter(s => s.length > 20);
   return sentences.slice(0, 2).join(' ').slice(0, 360);
-}
-
-function extractExercisesFromLines(lines, langKey) {
-  const patterns = {
-    en: [/^exercise\b/i, /^activity\b/i, /^task\b/i, /^practice\b/i, /\b(fill|match|translate|choose|write|complete)\b/i],
-    es: [/^ejercicio\b/i, /^actividad\b/i, /^práctica\b/i, /^completa\b/i, /^elige\b/i, /^escribe\b/i, /\b(traduce|relaciona|responde)\b/i],
-    tr: [/^alıştırma\b/i, /^etkinlik\b/i, /^görev\b/i, /^tamamla\b/i, /^yaz\b/i, /\b(çevir|eşleştir|seç)\b/i],
-    ar: [/^تمرين\b/i, /^نشاط\b/i, /^اكتب\b/i, /^أكمل\b/i, /\b(ترجم|اختر|اجب|أجب)\b/i]
-  }[langKey] || [/^exercise\b/i];
-
-  const instructionWords = {
-    en: ['fill', 'match', 'translate', 'choose', 'write', 'complete', 'answer'],
-    es: ['completa', 'elige', 'traduce', 'escribe', 'responde', 'relaciona'],
-    tr: ['tamamla', 'çevir', 'esleştir', 'eşleştir', 'seç', 'yaz', 'cevapla'],
-    ar: ['اكمل', 'أكمل', 'ترجم', 'اختر', 'اكتب', 'اجب', 'أجب']
-  }[langKey] || ['exercise'];
-
-  const out = [];
-  for (const raw of lines) {
-    const line = raw.trim();
-    if (!line || line.length < 8) continue;
-    if (/^\d+\s*$/.test(line)) continue;
-    if (/\.{3,}\s*\d+$/.test(line)) continue;
-    const numbered = /^\d{1,2}[\.\)]\s+/.test(line) || /^(exercise|ejercicio|alıştırma|تمرين)\s*\d+/i.test(line);
-    const matched = patterns.some(re => re.test(line));
-    const lineLow = normalizeLookupToken(line, langKey);
-    const hasInstructionWord = instructionWords.some((w) => lineLow.includes(normalizeLookupToken(w, langKey)));
-    if (matched || (numbered && hasInstructionWord)) {
-      out.push(line);
-    }
-    if (out.length >= 8) break;
-  }
-  return unique(out);
 }
 
 function getDefaultPathPoint(langKey, idx) {
@@ -916,24 +900,553 @@ function tokenizeWordsByLanguage(text, langKey) {
   return source.match(/[\p{L}][\p{L}'’-]{1,}/gu) || [];
 }
 
-function buildPlanFlow() {
+async function buildPlanFlow() {
   syncProfile();
   touchActivity();
+  if (!state.extractedText.trim()) {
+    ui.extractStatus.textContent = 'Сначала загрузите учебник с распознаваемым текстом.';
+    return;
+  }
+
+  ui.buildPlanBtn.disabled = true;
+  state.planBuilding = true;
+  ui.buildPlanBtn.textContent = 'Уточняем темы...';
+  state.steps = buildGuaranteedPlan();
+  state.currentStep = 0;
+  persistState();
+  renderAll();
+  ui.extractStatus.textContent = '10 готовых уроков уже построены. Нейросеть уточняет порядок тем по учебнику...';
+
+  const controller = new AbortController();
+  const requestTimer = setTimeout(() => controller.abort(), 50_000);
+  try {
+    const response = await fetch('/api/ai-plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      body: JSON.stringify({
+        textbook: state.extractedText,
+        profile: state.profile
+      })
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Не удалось получить план от нейросети.');
+    if (!Array.isArray(data.topics) || !data.topics.length) {
+      throw new Error('Нейросеть не вернула темы.');
+    }
+
+    const validTopics = data.topics.filter(topic => {
+      const title = String(topic?.grammarTitle || topic?.topic || '').trim();
+      return title.length >= 4 && !/^(учебная тема|тема|часть|раздел|урок)\s*\d*$/i.test(title);
+    });
+    if (!validTopics.length) throw new Error('Нейросеть не вернула грамматические темы.');
+    if (validTopics.length >= 10) {
+      state.steps = state.steps.map((step, index) => {
+        const aiTopic = validTopics[index];
+        if (!aiTopic) return step;
+        const title = cleanTopicTitle(aiTopic.grammarTitle || aiTopic.topic, step.grammarTitle);
+        return {
+          ...step,
+          topic: title,
+          level: String(aiTopic.level || step.level),
+          learningGoal: String(aiTopic.learningGoal || step.learningGoal),
+          summary: String(aiTopic.summary || step.summary)
+        };
+      });
+      state.steps = numberStepTitles(state.steps);
+    }
+    const languageInfo = data.detectedLanguage ? ` Язык учебника: ${data.detectedLanguage}.` : '';
+    ui.extractStatus.textContent = `Готово.${languageInfo} Все ${state.steps.length} уроков подготовлены, темы уточнены нейросетью.`;
+  } catch (error) {
+    ui.extractStatus.textContent = error.name === 'AbortError'
+      ? 'Готово: 10 уроков построены по учебнику. Нейросеть не успела уточнить названия, но план полностью доступен.'
+      : `Готово: 10 уроков построены по учебнику. AI-уточнение временно недоступно: ${error.message}`;
+  } finally {
+    clearTimeout(requestTimer);
+    state.planBuilding = false;
+    state.currentStep = 0;
+    persistState();
+    renderAll();
+    ui.buildPlanBtn.textContent = 'Построить план';
+    ui.buildPlanBtn.disabled = !state.extractedText.trim();
+  }
+}
+
+function buildGuaranteedPlan() {
+  const langKey = state.detectedLang !== 'unknown'
+    ? state.detectedLang
+    : getLanguageKey(state.profile.language);
+  const pack = LANGUAGE_PACKS[langKey] || LANGUAGE_PACKS.en;
+  const path = DEFAULT_PATH_BY_LANG[langKey] || DEFAULT_PATH_BY_LANG.en;
+  const sections = groupLocalSections(state.materialThemes, langKey);
+  const steps = path.slice(0, 10).map((point, index) => {
+    const section = sections[index] || { title: point.topic, summary: '', chunk: state.extractedText };
+    return composeGuaranteedStep(point, section, index, pack, langKey, path);
+  });
+  return numberStepTitles(steps);
+}
+
+function composeGuaranteedStep(point, section, index, pack, langKey, path) {
+  const module = pickModuleForSection(pack, section, index, langKey);
+  const vocabulary = buildGuaranteedVocabulary(section.chunk, module, langKey, index);
+  const vocabularyGroups = Array.from({ length: 5 }, (_, groupIndex) => ({
+    title: ['Основные понятия', 'Действия', 'Признаки и описания', 'Ситуации общения', 'Устойчивые фразы'][groupIndex],
+    items: vocabulary.slice(groupIndex * 8, groupIndex * 8 + 8)
+  }));
+  const examples = (module.grammarExamples || []).slice(0, 4);
+  const grammarRule = [
+    point.grammarRule,
+    `Это правило необходимо для полноценного общения в ситуациях «${point.topic}»: утверждений, уточнений, вопросов и отрицаний.`,
+    'Перед построением фразы определите коммуникативную задачу, лицо, число, время и тип предложения.',
+    'Затем выберите основу слова, добавьте нужные показатели формы и проверьте порядок слов.',
+    'В вопросах и отрицаниях обращайте внимание на служебные элементы и изменение позиции сказуемого.',
+    'Сопоставляйте форму с контекстом, потому что буквальный перевод русской конструкции часто создаёт ошибку.',
+    'После составления предложения отдельно проверьте согласование, исключения и естественность получившейся фразы.'
+  ].join(' ');
+  const generatedTasks = buildGuaranteedTasks(point, examples, vocabulary, index);
+  const quizSections = buildGuaranteedQuizSections(point, module, vocabulary, path, index);
+
+  return {
+    id: `local-${index}-${Date.now()}`,
+    topic: point.grammarTitle,
+    level: levelForLesson(index),
+    learningGoal: `Понять правило «${point.grammarTitle}» и уверенно применять его в речи и письме.`,
+    summary: section.summary || `Урок по теме «${point.topic}» с опорой на содержание загруженного учебника.`,
+    grammarTitle: point.grammarTitle,
+    grammarRule,
+    ruleSections: [
+      { title: 'Значение и ситуации употребления', text: `Правило «${point.grammarTitle}» помогает говорить и писать по теме «${point.topic}», описывать факты, задавать уточняющие вопросы и связывать реплики в естественное высказывание.` },
+      { title: 'Пошаговое образование формы', text: `${point.grammarRule} Алгоритм: определите основу, выберите лицо и число, добавьте нужный показатель, затем проверьте согласование и порядок слов.` },
+      { title: 'Утверждение, вопрос и отрицание', text: 'Сравнивайте три типа предложения. Форма или служебное слово могут меняться, поэтому не ограничивайтесь заменой одного русского слова.' },
+      { title: 'Ограничения и исключения', text: 'Проверяйте нерегулярные формы, особые окончания, выпадение или чередование звуков и случаи, где правило зависит от контекста.' },
+      { title: 'Типичные ошибки русскоязычных учеников', text: 'Не переносите русский порядок слов буквально, не смешивайте формы разных лиц и времён, проверяйте предлоги, артикли, падежи и согласование.' }
+    ],
+    grammarExamples: examples,
+    grammarQuiz: module.grammarQuiz || [],
+    vocabularyGroups,
+    vocabPairs: vocabulary,
+    generatedTasks,
+    quizSections,
+    quiz: quizSections.flatMap(sectionItem => sectionItem.questions),
+    lessonLoaded: true,
+    lessonLoading: false,
+    lessonError: '',
+    status: 'pending'
+  };
+}
+
+function buildGuaranteedVocabulary(chunk, module, langKey, lessonIndex) {
+  const glossary = GLOSSARY_BY_LANG[langKey] || GLOSSARY_BY_LANG.en;
+  const extracted = extractTopicVocabulary(chunk, langKey, module.vocab);
+  const pool = [
+    ...extracted,
+    ...(module.vocab || []),
+    ...Object.entries(glossary).map(([target, ru]) => ({ target, ru }))
+  ];
+  const uniquePool = uniqueObjects(pool, item =>
+    `${normalizeLookupToken(item.target, langKey)}|${normalizeLookupToken(item.ru, 'en')}`
+  );
+  if (!uniquePool.length) return [];
+  const offset = (lessonIndex * 7) % uniquePool.length;
+  return Array.from({ length: Math.min(40, uniquePool.length) }, (_, index) =>
+    uniquePool[(offset + index) % uniquePool.length]
+  );
+}
+
+function buildGuaranteedTasks(point, examples, vocabulary, lessonIndex = 0) {
+  const words = vocabulary.slice(0, 14);
+  const wordBank = words.map(item => `${item.target} — ${item.ru}`).join('; ');
+  const exampleAnswer = examples.map(item => `${item.target} — ${item.ru}`).join('\n');
+  const grammarVariants = [
+    {
+      type: 'grammar',
+      title: 'Отработка грамматического материала',
+      instruction: `Составьте 6 предложений по правилу «${point.grammarTitle}»: два утвердительных, два отрицательных и два вопросительных.`,
+      hints: ['Используйте разные лица и числа.', 'Проверьте форму сказуемого и порядок слов.'],
+      referenceAnswer: exampleAnswer || `Шесть корректных предложений с правилом «${point.grammarTitle}».`
+    },
+    {
+      type: 'grammar',
+      title: 'Исправление грамматических ошибок',
+      instruction: `Напишите 6 примеров с типичными ошибками по теме «${point.grammarTitle}», затем рядом дайте исправленный вариант и кратко назовите правило.`,
+      hints: ['Меняйте лицо, число и тип предложения.', 'Объясняйте исправление, а не только переписывайте фразу.'],
+      referenceAnswer: exampleAnswer || `Корректные примеры по теме «${point.grammarTitle}».`
+    },
+    {
+      type: 'grammar',
+      title: 'Трансформация предложений',
+      instruction: `Составьте 4 утвердительных предложения, затем преобразуйте каждое в вопрос и отрицание. Всего должно получиться 12 форм.`,
+      hints: ['Сохраняйте исходный смысл.', 'Проверяйте изменения служебных слов и порядка слов.'],
+      referenceAnswer: exampleAnswer || `Набор утверждений, вопросов и отрицаний по правилу «${point.grammarTitle}».`
+    }
+  ];
+  const vocabularyVariants = [
+    {
+      type: 'vocabulary',
+      title: 'Отработка лексического материала',
+      instruction: `Составьте 10 предложений, употребив не менее 10 единиц из банка слов: ${wordBank}.`,
+      hints: ['Каждое слово используйте в естественном контексте.', 'Не переводите русскую конструкцию дословно.'],
+      referenceAnswer: words.slice(0, 10).map((item, index) => `${index + 1}. ${item.target} — ${item.ru}`).join('\n')
+    },
+    {
+      type: 'vocabulary',
+      title: 'Лексика в контексте',
+      instruction: `Разделите слова на смысловые группы и составьте по две связанные фразы для каждой группы. Банк слов: ${wordBank}.`,
+      hints: ['Объясните принцип группировки.', 'Используйте грамматику текущего урока.'],
+      referenceAnswer: words.map(item => `${item.target} — ${item.ru}`).join('\n')
+    },
+    {
+      type: 'vocabulary',
+      title: 'Перевод и выбор сочетаемости',
+      instruction: `Выберите 10 единиц из банка, составьте с ними естественные словосочетания и переведите получившиеся фразы на русский язык: ${wordBank}.`,
+      hints: ['Проверяйте управление и предлоги.', 'Избегайте изолированных слов без контекста.'],
+      referenceAnswer: words.slice(0, 10).map(item => `${item.target} — ${item.ru}`).join('\n')
+    }
+  ];
+  const productionVariants = [
+    {
+      type: 'production',
+      title: 'Ситуативный диалог',
+      instruction: `Напишите диалог из 10 реплик по теме «${point.topic}». Используйте правило урока и минимум 6 единиц из банка слов.`,
+      hints: [`Банк слов: ${wordBank}`, 'Структура: начало разговора, обмен информацией, уточняющий вопрос, завершение.'],
+      referenceAnswer: [
+        `Образец строится по теме «${point.topic}».`,
+        ...examples.map(item => `— ${item.target}`),
+        '— Добавьте логичное завершение разговора с изученной лексикой.'
+      ].join('\n')
+    },
+    {
+      type: 'production',
+      title: 'Связный текст',
+      instruction: `Напишите связный текст из 10-12 предложений по теме «${point.topic}». Используйте правило урока минимум 6 раз и не менее 8 новых слов.`,
+      hints: ['Структура: введение, основная мысль, примеры, вывод.', `Банк слов: ${wordBank}`],
+      referenceAnswer: exampleAnswer || `Образец связного текста по теме «${point.topic}».`
+    },
+    {
+      type: 'production',
+      title: 'Ответ в практической ситуации',
+      instruction: `Представьте реальную ситуацию по теме «${point.topic}»: запрос информации, объяснение или решение проблемы. Напишите развёрнутый ответ или диалог из 10-12 реплик.`,
+      hints: ['Сформулируйте цель общения.', 'Добавьте уточнение, реакцию собеседника и логичное завершение.', `Лексическая опора: ${wordBank}`],
+      referenceAnswer: exampleAnswer || `Образец ответа в ситуации по теме «${point.topic}».`
+    }
+  ];
+  return [
+    grammarVariants[lessonIndex % grammarVariants.length],
+    vocabularyVariants[(lessonIndex + 1) % vocabularyVariants.length],
+    productionVariants[(lessonIndex + 2) % productionVariants.length]
+  ];
+}
+
+function buildGuaranteedQuizSections(point, module, vocabulary, path, lessonIndex) {
+  const grammarQuestions = (module.grammarQuiz || []).slice(0, 3).map(item => ({
+    q: item.q,
+    a: item.options,
+    ok: item.ok
+  }));
+  while (grammarQuestions.length < 3) {
+    grammarQuestions.push({
+      q: `Какое правило отрабатывается в этом уроке?`,
+      a: shuffle([
+        point.grammarTitle,
+        ...path.filter(item => item.grammarTitle !== point.grammarTitle).slice(0, 3).map(item => item.grammarTitle)
+      ]),
+      ok: 0
+    });
+    const last = grammarQuestions[grammarQuestions.length - 1];
+    last.ok = last.a.indexOf(point.grammarTitle);
+  }
+
+  const vocabularyQuestions = vocabulary.slice(0, 3).map((pair, index) => {
+    const wrong = vocabulary
+      .filter(item => item.target !== pair.target)
+      .slice(index + 1, index + 4)
+      .map(item => item.target);
+    const options = shuffle([pair.target, ...wrong]).slice(0, 4);
+    return {
+      q: `Выберите перевод: «${pair.ru}»`,
+      a: options,
+      ok: options.indexOf(pair.target)
+    };
+  });
+
+  const comprehensionPool = [
+    {
+      q: `В какой ситуации прежде всего понадобится тема «${point.topic}»?`,
+      a: [`Для общения по теме «${point.topic}»`, 'Только для записи чисел', 'Только для чтения алфавита', 'Для вычисления процентов'],
+      ok: 0
+    },
+    {
+      q: 'Что следует определить до выбора грамматической формы?',
+      a: ['Цель высказывания, лицо, число и время', 'Только длину фразы', 'Цвет страницы', 'Количество новых слов'],
+      ok: 0
+    },
+    {
+      q: 'Зачем сравнивать утверждение, вопрос и отрицание?',
+      a: ['Чтобы увидеть изменение формы и порядка слов', 'Чтобы убрать сказуемое', 'Чтобы не использовать лексику', 'Чтобы всегда писать одну форму'],
+      ok: 0
+    },
+    {
+      q: 'Какая проверка помогает избежать буквального перевода?',
+      a: ['Проверка естественности, управления и порядка слов', 'Подсчёт букв', 'Удаление предлогов', 'Замена всех слов инфинитивами'],
+      ok: 0
+    },
+    {
+      q: 'Что особенно важно проверить в готовом предложении?',
+      a: ['Согласование и соответствие контексту', 'Только первую букву', 'Только количество слов', 'Наличие длинного слова'],
+      ok: 0
+    },
+    {
+      q: 'Как лучше закрепить новое правило?',
+      a: ['Применять его в разных ситуациях и типах предложений', 'Повторять один пример без изменений', 'Не использовать в речи', 'Учить только название'],
+      ok: 0
+    },
+    {
+      q: 'Почему недостаточно заменить одно русское слово иностранным?',
+      a: ['Языки различаются формами, управлением и порядком слов', 'Все языки имеют одинаковую структуру', 'Перевод зависит только от длины', 'Грамматика не влияет на смысл'],
+      ok: 0
+    },
+    {
+      q: 'Какую роль выполняет контекст?',
+      a: ['Помогает выбрать подходящую форму и значение', 'Определяет размер шрифта', 'Заменяет грамматику', 'Нужен только для произношения'],
+      ok: 0
+    },
+    {
+      q: 'Когда следует проверять исключения?',
+      a: ['После выбора общей модели образования формы', 'Только до чтения темы', 'Исключения не проверяют', 'Только в русском переводе'],
+      ok: 0
+    },
+    {
+      q: 'Что показывает успешное понимание темы?',
+      a: ['Умение самостоятельно построить новую фразу', 'Запоминание номера урока', 'Копирование одного примера', 'Подсчёт слов в правиле'],
+      ok: 0
+    }
+  ];
+  const start = (lessonIndex * 3) % comprehensionPool.length;
+  const comprehensionQuestions = Array.from({ length: 2 }, (_, offset) =>
+    comprehensionPool[(start + offset) % comprehensionPool.length]
+  ).map(item => ({ ...item, a: [...item.a] }));
+  comprehensionQuestions.push({
+    q: `Какова главная грамматическая тема урока ${lessonIndex + 1}?`,
+    a: shuffle([
+      point.grammarTitle,
+      ...path.filter(item => item.grammarTitle !== point.grammarTitle).slice(lessonIndex % 4, lessonIndex % 4 + 3).map(item => item.grammarTitle)
+    ]),
+    ok: 0
+  });
+  comprehensionQuestions[2].ok = comprehensionQuestions[2].a.indexOf(point.grammarTitle);
+
+  return [
+    { type: 'grammar', title: 'Грамматика', questions: grammarQuestions },
+    { type: 'vocabulary', title: 'Лексика: слова и фразы', questions: vocabularyQuestions },
+    { type: 'comprehension', title: 'Понимание темы', questions: comprehensionQuestions }
+  ];
+}
+
+function levelForLesson(index) {
+  const levels = ['A0', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+  const start = Math.max(0, levels.indexOf(state.profile.level));
+  const end = Math.max(start, levels.indexOf(state.profile.targetLevel));
+  const position = Math.round(start + (end - start) * index / 9);
+  return levels[position];
+}
+
+function buildLocalPlan() {
   const langKey = state.detectedLang !== 'unknown' ? state.detectedLang : getLanguageKey(state.profile.language);
   const pack = LANGUAGE_PACKS[langKey] || LANGUAGE_PACKS.en;
-  const sections = state.materialThemes.length ? state.materialThemes : pack.modules.map((m) => ({
+  const rawSections = state.materialThemes.length ? state.materialThemes : pack.modules.map((m) => ({
     title: m.topic,
     summary: m.summary,
     exercises: [],
     chunk: ''
   }));
+  const sections = groupLocalSections(rawSections, langKey).slice(0, 8);
+  state.steps = numberStepTitles(sections.map((section, idx) => composeStep(section, idx, pack, langKey)));
+}
 
-  state.steps = ensureUniqueStepTitles(sections.map((section, idx) => composeStep(section, idx, pack, langKey)));
-  state.currentStep = 0;
-  state.pendingCards = state.steps[0] ? buildCards(state.steps[0]) : [];
-  state.approvedCards = [];
-  persistState();
-  renderAll();
+function composeAiStep(topic, idx) {
+  const langKey = state.detectedLang !== 'unknown' ? state.detectedLang : getLanguageKey(state.profile.language);
+  const pack = LANGUAGE_PACKS[langKey] || LANGUAGE_PACKS.en;
+  const fallbackSection = state.materialThemes[idx] || { title: '', summary: '', chunk: '' };
+  const fallback = composeStep(fallbackSection, idx, pack, langKey);
+  const cleanString = (value, fallbackValue = '') => {
+    const text = typeof value === 'string' ? value.trim() : '';
+    return text || fallbackValue;
+  };
+  const vocabularyGroups = Array.isArray(topic.vocabularyGroups)
+    ? topic.vocabularyGroups
+      .map((group, groupIndex) => ({
+        title: cleanString(group?.title, `Лексика ${groupIndex + 1}`),
+        items: Array.isArray(group?.items)
+          ? group.items
+            .map(pair => ({ target: cleanString(pair?.target), ru: cleanString(pair?.ru) }))
+            .filter(pair => pair.target && pair.ru)
+            .slice(0, 15)
+          : []
+      }))
+      .filter(group => group.items.length)
+      .slice(0, 6)
+    : [];
+  const vocabPairs = vocabularyGroups.flatMap(group => group.items).slice(0, 60);
+  const grammarExamples = Array.isArray(topic.grammarExamples)
+    ? topic.grammarExamples
+      .map(example => ({
+        target: cleanString(example?.target),
+        ru: cleanString(example?.ru)
+      }))
+      .filter(example => example.target && example.ru)
+      .slice(0, 8)
+    : [];
+  const generatedTasks = Array.isArray(topic.generatedTasks)
+    ? topic.generatedTasks
+      .map(task => ({
+        type: cleanString(task?.type),
+        title: cleanString(task?.title),
+        instruction: cleanString(task?.instruction),
+        hints: Array.isArray(task?.hints)
+          ? task.hints.map(hint => cleanString(hint)).filter(Boolean)
+          : [],
+        referenceAnswer: cleanString(task?.referenceAnswer)
+      }))
+      .filter(task => task.title && task.instruction)
+      .slice(0, 3)
+    : [];
+  const quizSections = Array.isArray(topic.quizSections)
+    ? topic.quizSections
+      .map(section => ({
+        type: cleanString(section?.type),
+        title: cleanString(section?.title),
+        questions: normalizeQuizQuestions(section?.questions)
+      }))
+      .filter(section => section.title && section.questions.length)
+      .slice(0, 3)
+    : [];
+  const ruleSections = Array.isArray(topic.ruleSections)
+    ? topic.ruleSections
+      .map(section => ({ title: cleanString(section?.title), text: cleanString(section?.text) }))
+      .filter(section => section.title && section.text)
+    : [];
+
+  return {
+    id: `ai-${idx}-${Date.now()}`,
+    topic: cleanTopicTitle(cleanString(topic.grammarTitle || topic.topic), ''),
+    level: cleanString(topic.level, state.profile.level),
+    learningGoal: cleanString(topic.learningGoal),
+    summary: cleanString(topic.summary, fallback.summary),
+    grammarTitle: cleanString(topic.grammarTitle, fallback.grammarTitle),
+    grammarRule: cleanString(topic.grammarRule, fallback.grammarRule),
+    ruleSections,
+    grammarExamples: grammarExamples.length ? grammarExamples : fallback.grammarExamples,
+    grammarQuiz: fallback.grammarQuiz,
+    vocabularyGroups,
+    vocabPairs,
+    generatedTasks,
+    quizSections,
+    quiz: quizSections.flatMap(section => section.questions),
+    status: 'pending'
+  };
+}
+
+function normalizeQuizQuestions(items) {
+  if (!Array.isArray(items)) return [];
+  return items.map(item => {
+    const answers = Array.isArray(item?.a)
+      ? item.a.map(answer => String(answer || '').trim()).filter(Boolean).slice(0, 4)
+      : [];
+    const ok = Number(item?.ok);
+    return {
+      q: String(item?.q || '').trim(),
+      a: answers,
+      ok: Number.isInteger(ok) && ok >= 0 && ok < answers.length ? ok : 0
+    };
+  }).filter(item => item.q && item.a.length === 4).slice(0, 6);
+}
+
+function cleanTopicTitle(value, fallback = 'Учебная тема') {
+  const cleaned = String(value || '')
+    .replace(/^(?:тема|часть|раздел|урок|section|topic|part)\s*\d*\s*[:.\-–—]?\s*/i, '')
+    .replace(/\s*\((?:часть|part)\s*\d+\)\s*$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return cleaned.length >= 4 ? cleaned : fallback;
+}
+
+function filterStepsByLevel(steps, currentLevel, targetLevel) {
+  const order = { A0: 0, A1: 1, A2: 2, B1: 3, B2: 4, C1: 5, C2: 6 };
+  const min = order[currentLevel] ?? 0;
+  const max = order[targetLevel] ?? 6;
+  const filtered = steps.filter(step => {
+    const level = String(step.level || '').toUpperCase().match(/[ABC][0-2]/)?.[0];
+    if (!level || order[level] === undefined) return true;
+    return order[level] >= min && order[level] <= max;
+  });
+  return filtered.length ? filtered : steps;
+}
+
+function topicWords(title) {
+  return new Set(
+    cleanTopicTitle(title, '')
+      .toLowerCase()
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter(word => word.length > 2)
+  );
+}
+
+function areSimilarTopics(left, right) {
+  const a = topicWords(left);
+  const b = topicWords(right);
+  if (!a.size || !b.size) return false;
+  const common = [...a].filter(word => b.has(word)).length;
+  return common / Math.min(a.size, b.size) >= 0.6;
+}
+
+function mergeSimilarSteps(steps) {
+  const merged = [];
+  for (const step of steps) {
+    const existing = merged.find(item => areSimilarTopics(item.topic, step.topic));
+    if (!existing) {
+      merged.push({ ...step, topic: cleanTopicTitle(step.topic) });
+      continue;
+    }
+    existing.summary = [existing.summary, step.summary].filter(Boolean).join(' ');
+    existing.grammarExamples = uniqueObjects([...existing.grammarExamples, ...step.grammarExamples], item => `${item.target}|${item.ru}`).slice(0, 8);
+    existing.vocabPairs = uniqueObjects([...existing.vocabPairs, ...step.vocabPairs], item => `${item.target}|${item.ru}`).slice(0, 12);
+    existing.generatedTasks = uniqueObjects([...existing.generatedTasks, ...step.generatedTasks], item => `${item.title}|${item.instruction}`).slice(0, 8);
+    existing.quiz = uniqueObjects([...existing.quiz, ...step.quiz], item => item.q).slice(0, 10);
+  }
+  return merged;
+}
+
+function groupLocalSections(sections, langKey) {
+  const grouped = [];
+  for (const section of sections) {
+    const inferred = inferTopicByKeywords(`${section.title}\n${section.chunk}`, langKey);
+    const title = cleanTopicTitle(inferred || section.title, '');
+    const existing = grouped.find(item => areSimilarTopics(item.title, title));
+    if (!existing) {
+      grouped.push({ ...section, title: title || `Учебная тема ${grouped.length + 1}` });
+      continue;
+    }
+    existing.chunk = `${existing.chunk}\n${section.chunk}`.slice(0, 12_000);
+    existing.summary = [existing.summary, section.summary].filter(Boolean).join(' ').slice(0, 700);
+  }
+  return grouped;
+}
+
+function uniqueObjects(items, keyFn) {
+  const seen = new Set();
+  return items.filter(item => {
+    const key = keyFn(item);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function numberStepTitles(steps) {
+  return steps.map((step, idx) => ({
+    ...step,
+    topic: `Тема ${idx + 1}. ${cleanTopicTitle(step.topic, `Учебная тема ${idx + 1}`)}`
+  }));
 }
 
 function composeStep(section, idx, pack, langKey) {
@@ -952,6 +1465,8 @@ function composeStep(section, idx, pack, langKey) {
   return {
     id: `${idx}-${Date.now()}`,
     topic: title,
+    level: state.profile.level,
+    learningGoal: `Освоить тему «${title}» и подготовиться к уровню ${state.profile.targetLevel}.`,
     summary: section.summary || module.summary,
     grammarTitle: grammarInfo.grammarTitle,
     grammarRule: grammarInfo.grammarRule,
@@ -959,14 +1474,13 @@ function composeStep(section, idx, pack, langKey) {
     grammarQuiz,
     vocabPairs,
     ruPrompts,
-    textbookExercises: section.exercises || [],
     generatedTasks: buildTasksFromModule({
       ...module,
       grammarTitle: grammarInfo.grammarTitle,
       grammarRule: grammarInfo.grammarRule,
       vocab: vocabPairs,
       ruPrompts
-    }, section.exercises || []),
+    }),
     quiz: buildQuizFromModule({
       grammarQuiz,
       vocab: vocabPairs
@@ -975,30 +1489,27 @@ function composeStep(section, idx, pack, langKey) {
   };
 }
 
-function buildTasksFromModule(module, textbookExercises) {
+function buildTasksFromModule(module) {
   const vocab = Array.isArray(module.vocab) && module.vocab.length ? module.vocab : [];
   const helperWords = vocab.slice(0, 6).map(v => `${v.ru} - ${v.target}`).join(', ');
-  const prompts = Array.isArray(module.ruPrompts) && module.ruPrompts.length ? module.ruPrompts.join(' / ') : 'Составьте 5 фраз по теме.';
   const tasks = [
     {
-      title: 'Грамматика с опорой',
-      instruction: `${module.grammarRule}\nПримеры: ${(module.grammarExamples || []).map(e => `${e.target} (${e.ru})`).join('; ')}\nОпорные слова: ${helperWords}.`
+      title: `Отработка правила: ${module.grammarTitle}`,
+      instruction: `Составьте 6 собственных предложений по правилу темы. Используйте разные лица, числа и формы. Не повторяйте примеры из объяснения.`
     },
     {
       title: 'Перевод RU -> язык',
-      instruction: `Переведите фразы: ${prompts}`
+      instruction: `Составьте и переведите 5 естественных русских предложений по теме, используя слова: ${helperWords}. Проверьте согласование рода, числа и падежа.`
     },
     {
-      title: 'Свой текст',
-      instruction: `Напишите 8-10 предложений, используя не менее 5 слов из списка: ${helperWords}.`
+      title: 'Изменение формы',
+      instruction: `Напишите 5 предложений, затем измените в каждом лицо, число или время согласно правилу темы.`
+    },
+    {
+      title: 'Связный текст',
+      instruction: `Напишите 8-10 связанных предложений по теме, используя не менее 5 слов из списка: ${helperWords}.`
     }
   ];
-  if (textbookExercises.length) {
-    tasks.push({
-      title: 'Упражнения из учебника',
-      instruction: textbookExercises.slice(0, 3).join(' | ')
-    });
-  }
   return tasks;
 }
 
@@ -1049,19 +1560,10 @@ function normalizeQuizOptions(aiOptions, fallbackOptions) {
   return clean.slice(0, 4);
 }
 
-function buildCards(step) {
-  return step.vocabPairs.map((p, idx) => ({
-    id: `${step.id}-${idx}`,
-    ru: p.ru,
-    target: p.target,
-    approved: false
-  }));
-}
-
 function nextTopic() {
   if (!state.steps.length || state.currentStep >= state.steps.length - 1) return;
   state.currentStep += 1;
-  state.pendingCards = buildCards(state.steps[state.currentStep]);
+  resetLessonInteraction();
   touchActivity();
   persistState();
   renderAll();
@@ -1073,115 +1575,219 @@ function completeTopic() {
   step.status = 'done';
   if (state.currentStep < state.steps.length - 1) {
     state.currentStep += 1;
-    state.pendingCards = buildCards(state.steps[state.currentStep]);
   }
+  resetLessonInteraction();
   persistState();
   renderAll();
 }
 
-async function generateAiQuiz() {
-  const step = state.steps[state.currentStep];
-  if (!step) return;
-  const prompt = `Сделай 10 вопросов теста по теме "${step.topic}".
-Верни JSON-массив вида [{q,a,ok}].
-Каждый вопрос должен иметь 4 реальных варианта ответа, а не A/B/C/D заглушки.
-Грамматика: ${step.grammarTitle}. Слова: ${step.vocabPairs.map(v => `${v.ru}-${v.target}`).join(', ')}.`;
-  try {
-    const res = await fetch('/api/ai-quiz', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt })
-    });
-    if (!res.ok) throw new Error('api');
-    const data = await res.json();
-    const text = data.output_text || data.text || '';
-    const m = text.match(/\[[\s\S]*\]/);
-    if (!m) throw new Error('format');
-    const parsed = JSON.parse(m[0]);
-    const fallbackQuiz = buildQuizFromModule({
-      grammarQuiz: step.grammarQuiz,
-      vocab: step.vocabPairs
-    });
-    step.quiz = parsed.slice(0, 10).map((x, i) => {
-      const fb = fallbackQuiz[i] || fallbackQuiz[0];
-      const rawOptions = Array.isArray(x.a) ? x.a.slice(0, 4).map(v => String(v || '').trim()) : [];
-      const options = normalizeQuizOptions(rawOptions, fb.a);
-      let ok = Number.isInteger(x.ok) ? x.ok : options.indexOf(rawOptions[0]);
-      if (ok < 0 || ok >= options.length) ok = fb.ok;
-      return {
-        q: String(x.q || '').trim() || fb.q || `Вопрос ${i + 1}`,
-        a: options,
-        ok
-      };
-    });
-    if (step.quiz.length < 10) {
-      step.quiz = [...step.quiz, ...fallbackQuiz.slice(step.quiz.length, 10)];
-    }
-    ui.quizResult.textContent = 'AI-тест обновлен.';
-  } catch {
-    step.quiz = buildQuizFromModule({
-      grammarQuiz: step.grammarQuiz,
-      vocab: step.vocabPairs
-    });
-    ui.quizResult.textContent = 'AI-сервис недоступен. Показан локальный тест с реальными вариантами.';
-  }
-  persistState();
-  renderQuiz();
-}
-
-function checkTaskAnswers() {
+async function checkTaskAnswers() {
   const inputs = [...document.querySelectorAll('textarea[data-task-answer="1"]')];
   if (!inputs.length) return;
   const step = state.steps[state.currentStep];
-  let score = 0;
-  const feedback = [];
-  const keyTargets = step.vocabPairs.slice(0, 6).map(v => v.target.toLowerCase());
+  const answers = inputs.map((input, index) => ({
+    taskIndex: index,
+    type: step.generatedTasks[index]?.type || '',
+    title: step.generatedTasks[index]?.title || `Задание ${index + 1}`,
+    instruction: step.generatedTasks[index]?.instruction || '',
+    hints: step.generatedTasks[index]?.hints || [],
+    referenceAnswer: step.generatedTasks[index]?.referenceAnswer || '',
+    answer: input.value.trim()
+  }));
+  if (answers.some(item => !item.answer)) {
+    ui.taskFeedback.textContent = 'Заполните все три задания перед проверкой.';
+    return;
+  }
 
-  inputs.forEach((input, i) => {
-    const txt = (input.value || '').trim();
-    const low = txt.toLowerCase();
-    if (txt.length >= 80) score += 1;
-    else feedback.push(`Задание ${i + 1}: добавьте больше текста.`);
-    const used = keyTargets.filter(w => low.includes(w)).length;
-    if (used < 2) feedback.push(`Задание ${i + 1}: используйте больше слов темы (${step.vocabPairs.slice(0, 4).map(v => v.target).join(', ')}).`);
-  });
-
-  const pct = Math.round((score / inputs.length) * 100);
-  ui.taskFeedback.textContent = `Проверка: ${pct}%. ${feedback.join(' ') || 'Хорошо: вы используете лексику и структуру темы.'}`;
+  ui.checkTasksBtn.disabled = true;
+  ui.taskFeedback.textContent = 'Нейросеть подробно проверяет ответы...';
+  try {
+    const feedback = await fetchJsonWithAutomaticRetry(
+      '/api/ai-feedback',
+      {
+        topic: {
+          topic: step.topic,
+          level: step.level,
+          grammarRule: step.grammarRule,
+          vocabularyGroups: step.vocabularyGroups
+        },
+        answers
+      },
+      (attempt, maxAttempts) => {
+        ui.taskFeedback.textContent = `Нейросеть проверяет ответы: попытка ${attempt}/${maxAttempts}...`;
+      }
+    );
+    renderTaskFeedback(feedback);
+  } catch (error) {
+    ui.taskFeedback.textContent = `Не удалось получить AI-комментарий после автоматических повторов: ${error.message}`;
+  } finally {
+    ui.checkTasksBtn.disabled = false;
+  }
 }
 
-function checkQuiz() {
+function renderTaskFeedback(feedback) {
+  const step = state.steps[state.currentStep];
+  const items = Array.isArray(feedback.items)
+    ? feedback.items.map((item, index) => {
+      const taskIndex = Number.isInteger(Number(item.taskIndex)) ? Number(item.taskIndex) : index;
+      const correctedAnswer = String(
+        item.correctedAnswer || step?.generatedTasks?.[taskIndex]?.referenceAnswer || ''
+      ).trim();
+      return `
+      <article class="task feedback-card">
+        <h3>Задание ${taskIndex + 1}</h3>
+        <p><strong>Что получилось:</strong> ${item.strengths || '—'}</p>
+        <p><strong>Что улучшить:</strong> ${item.improvements || '—'}</p>
+        <p>${item.feedback || ''}</p>
+        ${correctedAnswer ? `
+          <div class="reference-answer">
+            <h4>Правильный вариант</h4>
+            <div>${formatMultilineText(correctedAnswer)}</div>
+          </div>
+        ` : ''}
+      </article>
+    `;
+    }).join('')
+    : '';
+  const grammar = Array.isArray(feedback.focusGrammar) ? feedback.focusGrammar.join('; ') : '';
+  const vocabulary = Array.isArray(feedback.focusVocabulary) ? feedback.focusVocabulary.join('; ') : '';
+  ui.taskFeedback.innerHTML = `
+    <strong>Общий комментарий:</strong> ${feedback.overall || ''}
+    ${grammar ? `<p><strong>Грамматический фокус:</strong> ${grammar}</p>` : ''}
+    ${vocabulary ? `<p><strong>Лексический фокус:</strong> ${vocabulary}</p>` : ''}
+    <div class="tasks">${items}</div>
+  `;
+}
+
+async function checkQuiz() {
   const step = state.steps[state.currentStep];
   if (!step) return;
-  const picks = [...document.querySelectorAll('input[type="radio"]:checked')];
+  const questionCards = [...ui.quiz.querySelectorAll('.q-item')];
+  const selectedAnswers = questionCards.map(card => card.querySelector('input[type="radio"]:checked'));
+  if (selectedAnswers.some(answer => !answer)) {
+    ui.quizResult.textContent = 'Ответьте на все вопросы перед проверкой.';
+    return;
+  }
+
   let score = 0;
+  const answers = [];
   step.quiz.forEach((q, i) => {
-    const checked = picks.find(p => Number(p.name.replace('q-', '')) === i);
-    if (checked && Number(checked.value) === q.ok) score += 1;
+    const card = questionCards[i];
+    if (!card) return;
+    const checked = card.querySelector('input[type="radio"]:checked');
+    const selected = checked ? Number(checked.value) : -1;
+    const isCorrect = selected === q.ok;
+    if (isCorrect) score += 1;
+    answers.push({
+      question: q.q,
+      selectedAnswer: selected >= 0 ? q.a[selected] : '',
+      correctAnswer: q.a[q.ok],
+      isCorrect
+    });
+
+    card.classList.remove('quiz-correct', 'quiz-wrong');
+    card.classList.add(isCorrect ? 'quiz-correct' : 'quiz-wrong');
+    card.querySelectorAll('label').forEach((label, optionIndex) => {
+      label.classList.remove('answer-correct', 'answer-wrong');
+      if (optionIndex === q.ok) label.classList.add('answer-correct');
+      if (optionIndex === selected && !isCorrect) label.classList.add('answer-wrong');
+    });
+    const oldMarker = card.querySelector('.quiz-marker');
+    if (oldMarker) oldMarker.remove();
+    const marker = document.createElement('div');
+    marker.className = `quiz-marker ${isCorrect ? 'correct' : 'wrong'}`;
+    marker.textContent = isCorrect
+      ? '✓ Правильно'
+      : `✕ Неправильно. Верный ответ: ${q.a[q.ok]}`;
+    card.appendChild(marker);
   });
   const pct = Math.round((score / Math.max(1, step.quiz.length)) * 100);
-  ui.quizResult.textContent = `Результат: ${score}/${step.quiz.length} (${pct}%).`;
+  ui.quizResult.textContent = `Результат: ${score}/${step.quiz.length} (${pct}%). Нейросеть анализирует прогресс...`;
   if (pct >= 70 && step.status === 'pending') step.status = 'in_progress';
   persistState();
+
+  ui.checkQuizBtn.disabled = true;
+  try {
+    const feedback = await fetchJsonWithAutomaticRetry(
+      '/api/ai-test-feedback',
+      {
+        topic: {
+          topic: step.topic,
+          level: step.level,
+          grammarRule: step.grammarRule
+        },
+        score: {
+          correct: score,
+          total: step.quiz.length,
+          percent: pct
+        },
+        answers
+      },
+      (attempt, maxAttempts) => {
+        ui.quizResult.textContent = `Результат: ${score}/${step.quiz.length} (${pct}%). AI-анализ: попытка ${attempt}/${maxAttempts}...`;
+      }
+    );
+    renderQuizFeedback(score, step.quiz.length, pct, feedback);
+  } catch (error) {
+    ui.quizResult.textContent = `Результат: ${score}/${step.quiz.length} (${pct}%). AI-анализ недоступен: ${error.message}`;
+  } finally {
+    ui.checkQuizBtn.disabled = false;
+  }
 }
 
-function approveSelectedCards() {
-  const checked = [...document.querySelectorAll('input[data-card-check="1"]:checked')].map(x => x.value);
-  for (const id of checked) {
-    const card = state.pendingCards.find(c => c.id === id);
-    if (card && !state.approvedCards.find(a => a.id === id)) {
-      card.approved = true;
-      state.approvedCards.push(card);
+async function fetchJsonWithAutomaticRetry(url, payload, onAttempt, maxAttempts = 5) {
+  let lastError = new Error('AI API не ответило.');
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    if (onAttempt) onAttempt(attempt, maxAttempts);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 100_000);
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || `Ошибка API ${response.status}`);
+      return data;
+    } catch (error) {
+      lastError = error.name === 'AbortError'
+        ? new Error('Превышено время ожидания ответа.')
+        : error;
+      if (attempt < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, attempt * 3000));
+      }
+    } finally {
+      clearTimeout(timer);
     }
   }
-  persistState();
-  renderCards();
+  throw lastError;
 }
 
-function exportAnkiCsv() {
-  if (!state.approvedCards.length) return;
-  const lines = ['Front,Back', ...state.approvedCards.map(c => `${csvEscape(c.ru)},${csvEscape(c.target)}`)];
-  downloadFile('anki_cards_ru_foreign.csv', lines.join('\n'), 'text/csv;charset=utf-8');
+function renderQuizFeedback(score, total, percent, feedback) {
+  const repeated = Array.isArray(feedback.repeatedIssues) ? feedback.repeatedIssues.join('; ') : '';
+  const grammar = Array.isArray(feedback.focusGrammar) ? feedback.focusGrammar.join('; ') : '';
+  const vocabulary = Array.isArray(feedback.focusVocabulary) ? feedback.focusVocabulary.join('; ') : '';
+  ui.quizResult.innerHTML = `
+    <div class="test-feedback">
+      <h3>Результат: ${score}/${total} (${percent}%)</h3>
+      <p><strong>Общий анализ:</strong> ${feedback.overall || '—'}</p>
+      <p><strong>Динамика:</strong> ${feedback.progress || '—'}</p>
+      ${repeated ? `<p><strong>Повторяющиеся трудности:</strong> ${repeated}</p>` : ''}
+      ${grammar ? `<p><strong>Повторить грамматику:</strong> ${grammar}</p>` : ''}
+      ${vocabulary ? `<p><strong>Повторить лексику:</strong> ${vocabulary}</p>` : ''}
+      ${feedback.nextStep ? `<p><strong>Следующий шаг:</strong> ${feedback.nextStep}</p>` : ''}
+    </div>
+  `;
+}
+
+function formatMultilineText(value) {
+  return String(value || '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replace(/\n/g, '<br>');
 }
 
 function startTimer() {
@@ -1216,23 +1822,20 @@ function resetTimer() {
 }
 
 function renderAll() {
-  ui.authOverlay.style.display = state.authUser ? 'none' : 'grid';
   renderProfile();
   renderFileList();
   renderRoadmap();
   renderTopicGuide();
-  renderBookExercises();
   renderTasks();
   renderQuiz();
-  renderCards();
   renderTimer();
+  setUploadAvailability();
 
-  ui.buildPlanBtn.disabled = state.materialThemes.length === 0;
+  ui.buildPlanBtn.disabled = !state.extractedText.trim() || state.planBuilding;
   const hasPlan = state.steps.length > 0;
   ui.roadmapPanel.hidden = !hasPlan;
   ui.tasksPanel.hidden = !hasPlan;
   ui.quizPanel.hidden = !hasPlan;
-  ui.cardsPanel.hidden = !hasPlan;
 }
 
 function renderProfile() {
@@ -1241,7 +1844,6 @@ function renderProfile() {
   ui.targetLevel.value = state.profile.targetLevel;
   ui.hours.value = state.profile.hours;
   ui.timerMinutes.value = state.timerDefaultMinutes;
-  if (ui.parseMode) ui.parseMode.value = state.parseMode || 'accurate';
 }
 
 function renderFileList() {
@@ -1262,10 +1864,10 @@ function renderRoadmap() {
     li.className = step.status === 'done' ? 'done' : idx === state.currentStep ? 'active' : '';
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.textContent = step.topic;
+    btn.textContent = `${step.topic}${step.level ? ` [${step.level}]` : ''}`;
     btn.addEventListener('click', () => {
       state.currentStep = idx;
-      state.pendingCards = buildCards(state.steps[state.currentStep]);
+      resetLessonInteraction();
       persistState();
       renderAll();
     });
@@ -1277,45 +1879,66 @@ function renderRoadmap() {
 function renderTopicGuide() {
   const step = state.steps[state.currentStep];
   if (!step || !ui.topicGuide) return;
-  const examples = step.grammarExamples.map(e => `<li>${e.target} - ${e.ru}</li>`).join('');
-  const rows = step.vocabPairs.map(v => `<tr><td>${v.ru}</td><td>${v.target}</td></tr>`).join('');
   ui.activeTopic.textContent = step.topic;
+  if (step.lessonLoading) {
+    ui.topicGuide.innerHTML = '<p>Нейросеть готовит подробное правило, лексику, задания и тест для этой темы. Обычно это занимает до 3 минут.</p>';
+    return;
+  }
+  if (!step.lessonLoaded) {
+    const error = step.lessonError ? `<p class="error">${step.lessonError}</p>` : '';
+    ui.topicGuide.innerHTML = `${error}<p>Это старый незавершённый план. Нажмите «Построить план», чтобы получить все уроки одним запросом.</p>`;
+    return;
+  }
+  const examples = step.grammarExamples.map(e => `<li>${e.target} - ${e.ru}</li>`).join('');
+  const ruleSections = (step.ruleSections || []).map(section => `
+    <section class="rule-section">
+      <h5>${section.title}</h5>
+      <p>${section.text}</p>
+    </section>
+  `).join('');
+  const vocabGroups = (step.vocabularyGroups || []).map((group, index) => {
+    const rows = group.items.map(v => `<tr><td>${v.ru}</td><td>${v.target}</td></tr>`).join('');
+    return `
+      <details class="vocab-group" ${index === 0 ? 'open' : ''}>
+        <summary>${group.title} (${group.items.length})</summary>
+        <table class="vocab-table"><tbody>${rows}</tbody></table>
+      </details>
+    `;
+  }).join('');
   ui.topicGuide.innerHTML = `
-    <h4>${step.grammarTitle}</h4>
+    <p><strong>Уровень:</strong> ${step.level || state.profile.level}</p>
+    ${step.learningGoal ? `<p><strong>Цель:</strong> ${step.learningGoal}</p>` : ''}
+    <p><strong>Содержание:</strong> ${step.summary || ''}</p>
+    <h4>Правило: ${step.grammarTitle}</h4>
     <p>${step.grammarRule}</p>
-    <p>${step.summary || ''}</p>
+    ${ruleSections}
+    <h4>Примеры правила</h4>
     <ol class="guide-list">${examples}</ol>
-    <table class="vocab-table">
-      <thead><tr><th>Русский</th><th>${state.profile.language}</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
+    <h4>Лексика урока (${step.vocabPairs.length} слов и фраз)</h4>
+    <div class="vocab-groups">${vocabGroups}</div>
   `;
-}
-
-function renderBookExercises() {
-  ui.bookExercises.innerHTML = '';
-  const step = state.steps[state.currentStep];
-  if (!step) return;
-
-  const list = step.textbookExercises.length
-    ? step.textbookExercises
-    : ['Не удалось извлечь упражнения из этой темы. Загрузите PDF с более четким текстом или включите режим "Точно".'];
-
-  list.forEach((ex) => {
-    const li = document.createElement('li');
-    li.innerHTML = `<span>${ex}</span><small>из учебника</small>`;
-    ui.bookExercises.appendChild(li);
-  });
 }
 
 function renderTasks() {
   ui.tasks.innerHTML = '';
   const step = state.steps[state.currentStep];
-  if (!step) return;
-  step.generatedTasks.forEach((task) => {
+  if (!step || !step.lessonLoaded) {
+    ui.checkTasksBtn.disabled = true;
+    return;
+  }
+  ui.checkTasksBtn.disabled = false;
+  step.generatedTasks.forEach((task, index) => {
     const card = document.createElement('article');
-    card.className = 'task';
-    card.innerHTML = `<h3>${task.title}</h3><p>${task.instruction}</p><textarea data-task-answer="1" rows="4" placeholder="Введите ваш ответ..."></textarea>`;
+    card.className = 'task task-block';
+    const hints = Array.isArray(task.hints) && task.hints.length
+      ? `<details class="task-hints"><summary>Подсказки и условия</summary><ol>${task.hints.map(hint => `<li>${hint}</li>`).join('')}</ol></details>`
+      : '';
+    card.innerHTML = `
+      <h3>${index + 1}. ${task.title}</h3>
+      <div class="task-instruction">${formatMultilineText(task.instruction)}</div>
+      ${hints}
+      <textarea data-task-answer="1" rows="8" placeholder="Введите ваш ответ..."></textarea>
+    `;
     ui.tasks.appendChild(card);
   });
 }
@@ -1323,30 +1946,32 @@ function renderTasks() {
 function renderQuiz() {
   ui.quiz.innerHTML = '';
   const step = state.steps[state.currentStep];
-  if (!step) return;
-  step.quiz.forEach((q, i) => {
-    const el = document.createElement('article');
-    el.className = 'q-item';
-    const options = q.a.map((option, idx) => `<label><input type="radio" name="q-${i}" value="${idx}" /> ${option}</label>`).join('');
-    el.innerHTML = `<p>${q.q}</p>${options}`;
-    ui.quiz.appendChild(el);
+  if (!step || !step.lessonLoaded) {
+    ui.checkQuizBtn.disabled = true;
+    return;
+  }
+  ui.checkQuizBtn.disabled = false;
+  let questionIndex = 0;
+  (step.quizSections || []).forEach(section => {
+    const wrapper = document.createElement('section');
+    wrapper.className = 'quiz-section';
+    wrapper.innerHTML = `<h3>${section.title}</h3>`;
+    section.questions.forEach(q => {
+      const currentIndex = questionIndex;
+      questionIndex += 1;
+      const el = document.createElement('article');
+      el.className = 'q-item';
+      const options = q.a.map((option, idx) => `<label><input type="radio" name="q-${currentIndex}" value="${idx}" /> ${option}</label>`).join('');
+      el.innerHTML = `<p>${q.q}</p>${options}`;
+      wrapper.appendChild(el);
+    });
+    ui.quiz.appendChild(wrapper);
   });
 }
 
-function renderCards() {
-  ui.pendingCards.innerHTML = '';
-  if (!state.pendingCards.length) {
-    const li = document.createElement('li');
-    li.innerHTML = '<span>Нет карточек для текущей темы.</span><small>—</small>';
-    ui.pendingCards.appendChild(li);
-    return;
-  }
-  state.pendingCards.forEach(card => {
-    const li = document.createElement('li');
-    const checked = state.approvedCards.find(a => a.id === card.id) ? 'checked' : '';
-    li.innerHTML = `<span><label><input type="checkbox" data-card-check="1" value="${card.id}" ${checked}/> ${card.ru} -> ${card.target}</label></span><small>${checked ? 'одобрено' : 'ожидает'}</small>`;
-    ui.pendingCards.appendChild(li);
-  });
+function resetLessonInteraction() {
+  ui.taskFeedback.textContent = '';
+  ui.quizResult.textContent = '';
 }
 
 function renderTimer() {
@@ -1377,10 +2002,6 @@ function touchActivity() {
 
 function getLanguageKey(label) {
   return LANGUAGE_KEY_BY_LABEL[label] || 'en';
-}
-
-function getPdfModeConfig() {
-  return PDF_MODE[state.parseMode] || PDF_MODE.accurate;
 }
 
 function normalizeLookupToken(value, langKey) {
@@ -1466,21 +2087,6 @@ function toISODate(d) {
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split('T')[0];
 }
 
-function csvEscape(v) {
-  const s = String(v ?? '');
-  return `"${s.replaceAll('"', '""')}"`;
-}
-
-function downloadFile(name, content, mime) {
-  const blob = new Blob([content], { type: mime });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
 function persistState() {
   const serializable = {
     ...state,
@@ -1494,8 +2100,19 @@ function restoreState() {
   if (!raw) return;
   try {
     Object.assign(state, JSON.parse(raw));
+    delete state.pendingCards;
+    delete state.approvedCards;
+    state.profileConfirmed = false;
+    state.planBuilding = false;
     state.timerRunning = false;
-    if (!PDF_MODE[state.parseMode]) state.parseMode = 'accurate';
+    state.steps = Array.isArray(state.steps)
+      ? state.steps.map(step => ({
+        ...step,
+        lessonLoaded: step.lessonLoaded ?? Boolean(step.grammarRule && step.generatedTasks?.length),
+        lessonLoading: false,
+        lessonError: ''
+      }))
+      : [];
   } catch {
     localStorage.removeItem(STORAGE_KEY);
   }
