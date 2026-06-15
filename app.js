@@ -553,8 +553,21 @@ async function logoutUser() {
   try {
     await fetch('/api/logout', { method: 'POST' });
   } finally {
+    clearLearningSession();
+    localStorage.removeItem(STORAGE_KEY);
     window.location.replace('/login.html');
   }
+}
+
+function clearLearningSession() {
+  state.files = [];
+  state.extractedText = '';
+  state.detectedLang = 'unknown';
+  state.materialThemes = [];
+  state.steps = [];
+  state.currentStep = 0;
+  state.profileConfirmed = false;
+  state.planBuilding = false;
 }
 
 async function handleSelectedFiles(files) {
@@ -576,9 +589,12 @@ async function handleSelectedFiles(files) {
     const text = await extractTextFromSingleFile(file, i + 1, files.length);
     state.extractedText += `\n${text}`;
     state.detectedLang = detectLanguage(state.extractedText);
-    const selectedLang = state.detectedLang !== 'unknown' ? state.detectedLang : getLanguageKey(state.profile.language);
+    const selectedLang = getLanguageKey(state.profile.language);
     state.materialThemes = extractThemesInOrder(state.extractedText, selectedLang);
-    ui.extractStatus.textContent = `Обработано ${i + 1}/${files.length}. Учебник готов к анализу нейросетью.`;
+    const mismatch = state.detectedLang !== 'unknown' && state.detectedLang !== selectedLang;
+    ui.extractStatus.textContent = mismatch
+      ? `Обработано ${i + 1}/${files.length}. Выбран язык «${state.profile.language}»; автоопределение не будет менять язык курса.`
+      : `Обработано ${i + 1}/${files.length}. Учебник готов к анализу нейросетью.`;
     persistState();
   }
 
@@ -934,12 +950,25 @@ async function buildPlanFlow() {
     if (!Array.isArray(data.topics) || !data.topics.length) {
       throw new Error('Нейросеть не вернула темы.');
     }
+    const selectedLanguageKey = getLanguageKey(state.profile.language);
+    const aiLanguageKey = getLanguageKeyFromAiLabel(data.detectedLanguage);
+    if (aiLanguageKey && aiLanguageKey !== selectedLanguageKey) {
+      throw new Error(
+        `Нейросеть определила другой язык (${data.detectedLanguage}); её темы отклонены, выбранный язык курса сохранён.`
+      );
+    }
 
     const validTopics = data.topics.filter(topic => {
       const title = String(topic?.grammarTitle || topic?.topic || '').trim();
       return title.length >= 4 && !/^(учебная тема|тема|часть|раздел|урок)\s*\d*$/i.test(title);
     });
     if (!validTopics.length) throw new Error('Нейросеть не вернула грамматические темы.');
+    const topicsLanguageKey = detectLanguage(
+      validTopics.map(topic => topic.grammarTitle || topic.topic || '').join('\n')
+    );
+    if (topicsLanguageKey !== 'unknown' && topicsLanguageKey !== selectedLanguageKey) {
+      throw new Error('Названия тем пришли на другом языке и были отклонены.');
+    }
     if (validTopics.length >= 10) {
       state.steps = state.steps.map((step, index) => {
         const aiTopic = validTopics[index];
@@ -973,9 +1002,7 @@ async function buildPlanFlow() {
 }
 
 function buildGuaranteedPlan() {
-  const langKey = state.detectedLang !== 'unknown'
-    ? state.detectedLang
-    : getLanguageKey(state.profile.language);
+  const langKey = getLanguageKey(state.profile.language);
   const pack = LANGUAGE_PACKS[langKey] || LANGUAGE_PACKS.en;
   const path = DEFAULT_PATH_BY_LANG[langKey] || DEFAULT_PATH_BY_LANG.en;
   const sections = groupLocalSections(state.materialThemes, langKey);
@@ -1251,7 +1278,7 @@ function levelForLesson(index) {
 }
 
 function buildLocalPlan() {
-  const langKey = state.detectedLang !== 'unknown' ? state.detectedLang : getLanguageKey(state.profile.language);
+  const langKey = getLanguageKey(state.profile.language);
   const pack = LANGUAGE_PACKS[langKey] || LANGUAGE_PACKS.en;
   const rawSections = state.materialThemes.length ? state.materialThemes : pack.modules.map((m) => ({
     title: m.topic,
@@ -1264,7 +1291,7 @@ function buildLocalPlan() {
 }
 
 function composeAiStep(topic, idx) {
-  const langKey = state.detectedLang !== 'unknown' ? state.detectedLang : getLanguageKey(state.profile.language);
+  const langKey = getLanguageKey(state.profile.language);
   const pack = LANGUAGE_PACKS[langKey] || LANGUAGE_PACKS.en;
   const fallbackSection = state.materialThemes[idx] || { title: '', summary: '', chunk: '' };
   const fallback = composeStep(fallbackSection, idx, pack, langKey);
@@ -2004,6 +2031,16 @@ function getLanguageKey(label) {
   return LANGUAGE_KEY_BY_LABEL[label] || 'en';
 }
 
+function getLanguageKeyFromAiLabel(label) {
+  const value = String(label || '').toLowerCase();
+  if (!value) return '';
+  if (/(english|англий)/.test(value)) return 'en';
+  if (/(spanish|español|испан)/.test(value)) return 'es';
+  if (/(turkish|türk|турец)/.test(value)) return 'tr';
+  if (/(arabic|العربية|араб)/.test(value)) return 'ar';
+  return '';
+}
+
 function normalizeLookupToken(value, langKey) {
   let out = String(value || '').toLowerCase().trim();
   if (langKey !== 'ar') {
@@ -2089,30 +2126,32 @@ function toISODate(d) {
 
 function persistState() {
   const serializable = {
-    ...state,
-    files: state.files.map(f => ({ name: f.name, size: f.size, type: f.type }))
+    profile: state.profile,
+    streak: state.streak,
+    lastActiveDate: state.lastActiveDate,
+    timerSeconds: state.timerSeconds,
+    timerDefaultMinutes: state.timerDefaultMinutes
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(serializable));
 }
 
 function restoreState() {
   const raw = localStorage.getItem(STORAGE_KEY);
+  clearLearningSession();
   if (!raw) return;
   try {
-    Object.assign(state, JSON.parse(raw));
-    delete state.pendingCards;
-    delete state.approvedCards;
-    state.profileConfirmed = false;
-    state.planBuilding = false;
+    const saved = JSON.parse(raw);
+    if (saved.profile && typeof saved.profile === 'object') {
+      state.profile = { ...state.profile, ...saved.profile };
+    }
+    if (Number.isFinite(saved.streak)) state.streak = saved.streak;
+    if (typeof saved.lastActiveDate === 'string') state.lastActiveDate = saved.lastActiveDate;
+    if (Number.isFinite(saved.timerSeconds)) state.timerSeconds = saved.timerSeconds;
+    if (Number.isFinite(saved.timerDefaultMinutes)) {
+      state.timerDefaultMinutes = saved.timerDefaultMinutes;
+    }
     state.timerRunning = false;
-    state.steps = Array.isArray(state.steps)
-      ? state.steps.map(step => ({
-        ...step,
-        lessonLoaded: step.lessonLoaded ?? Boolean(step.grammarRule && step.generatedTasks?.length),
-        lessonLoading: false,
-        lessonError: ''
-      }))
-      : [];
+    persistState();
   } catch {
     localStorage.removeItem(STORAGE_KEY);
   }
